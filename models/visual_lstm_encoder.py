@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import LSTM
 
 
-class visualLSTMEncoder(nn.Module):
+class VisualLSTMEncoder(nn.Module):
     def __init__(self, hidden_size, embed_size):
         super().__init__()
         self.hidden_size = hidden_size

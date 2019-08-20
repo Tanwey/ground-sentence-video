@@ -4,7 +4,7 @@ from torch.nn import LSTM, LSTMCell
 
 
 
-class textualLSTMEncoder(nn.Module):
+class TextualLSTMEncoder(nn.Module):
     def __init__(self, embed_size, hidden_size):
         """
         :param embed_size: embedding dimension of the words
