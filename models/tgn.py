@@ -12,7 +12,7 @@ class tgn(nn.Module):
         super(tgn, self).__init__()
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=, hidden_size=)
         self.cnn_encoder = CNNEncoder()
-        self.visual_lstm_encoder = VisualLSTMEncoder()
+        self.visual_lstm_encoder = VisualLSTMEncoder(embed_size=)
 
     def forward(self, h_video: torch.Tensor, h_sentence: torch.Tensor):
         T, N = h_video.shape[0], h_sentence.shape[0]
