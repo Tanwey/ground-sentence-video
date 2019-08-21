@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 from torch.nn import LSTM, LSTMCell, Linear, Parameter
 
-class InteractionLSTM(nn.Module):
+class Interactor(nn.Module):
     def __init__(self, input_size: int, hidden_size_textual: int, hidden_size_visual: int,
                  hidden_size_ilstm: int):
         """
         :param input_size:
         :param hidden_size:
         """
-        super(InteractionLSTM, self).__init__()
+        super(Interactor, self).__init__()
 
         # represented by W_S, W_R, W_V with bias b
         self.projection_S = Linear(hidden_size_textual, hidden_size_ilstm, bias=True)
