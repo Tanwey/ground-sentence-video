@@ -7,7 +7,7 @@ import numpy as np
 from typing import List
 
 
-def pad_sents(sents: List[List[str]], pad_token: str):
+def pad_sents(sents, pad_token):
     """ Pad list of sentences according to the longest sentence in the batch.
     :param sents (list[list[str]]): list of sentences, where each sentence
                                     is represented as a list of words

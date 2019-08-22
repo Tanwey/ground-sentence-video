@@ -13,9 +13,7 @@ Options:
     --hidden-size-visual-lstm=<int>         hidden size of visual lstm [default: 512]
     --clip-grad=<float>                     gradient clipping [default: 5.0]
     --log-every=<int>                       log every [default: 10]
-    --max-epoch=<int>                       max epoch [default: 30]
-    --patience=<int>                        wait for how many iterations to decay learning rate [default: 5]
-    --max-num-trial=<int>                   terminate training after how many trials [default: 5]
+    --n-iter=<int>                          number of iterations of training [default: 200]
     --lr=<float>                            learning rate [default: 0.001]
     --uniform-init=<float>                  uniformly initialize all parameters [default: 0.1]
     --save-to=<file>                        model save path [default: model.bin]
@@ -27,20 +25,27 @@ Options:
 
 import torch
 import torch.nn as nn
-import numpy as np
 from tqdm import tqdm
 from models.tgn import TGN
 from docopt import docopt
 from typing import Dict
+from vocab import Vocab
+from utils import load_word_vectors
 
 
-def train(model: TGN, args: Dict):
-    n_epochs = args['--max-epoch']
+def train(model: TGN, embedding: nn.Embedding, args: Dict):
+    n_iter = args['--n-iter']
     valid_niter = args['--valid-niter']
+
+    for i in range(n_iter):
+        pass
 
 
 
 if __name__ == '__main__':
     args = docopt(__doc__)
-    print(args[''])
-
+    words, word_vectors = load_word_vectors('glove.840B.300d.txt')
+    vocab = Vocab(words)
+    embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
+    model = TGN(args)
+    train(model, embedding)

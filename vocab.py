@@ -1,24 +1,23 @@
 from typing import List
 import torch
+from utils import pad_sents
+
 
 
 class Vocab(object):
     """ Vocabulary
     Constructing the vocabulary with the words of Glove 300d
     """
-    def __init__(self, word2id=None):
+    def __init__(self, words):
         """ Init VocabEntry Instance.
-        @param word2id (dict): dictionary mapping words 2 indices
+        :param words: list of words
         """
-        if word2id:
-            self.word2id = word2id
-        else:
-            self.word2id = dict()
-            self.word2id['<pad>'] = 0   # Pad Token
-            self.word2id['<s>'] = 1 # Start Token
-            self.word2id['</s>'] = 2    # End Token
-            self.word2id['<unk>'] = 3   # Unknown Token
-        self.unk_id = self.word2id['<unk>']
+        self.word2id = dict()
+        self.word2id['<pad>'] = 0   # Pad Token
+
+        for i, word in enumerate(words):
+            self.word2id[word] = i+1
+
         self.id2word = {v: k for k, v in self.word2id.items()}
 
     def __getitem__(self, word):
@@ -27,7 +26,7 @@ class Vocab(object):
         @param word (str): word to look up.
         @returns index (int): index of word
         """
-        return self.word2id.get(word, self.unk_id)
+        return self.word2id.get(word, self.word2id['<pad>'])
 
     def __contains__(self, word):
         """ Check if word is captured by VocabEntry.
@@ -104,20 +103,3 @@ class Vocab(object):
         sents_var = torch.tensor(sents_t, dtype=torch.long, device=device)
         return torch.t(sents_var)
 
-    @staticmethod
-    def from_corpus(corpus, size, freq_cutoff=2):
-        """ Given a corpus construct a Vocab Entry.
-        @param corpus (list[str]): corpus of text produced by read_corpus function
-        @param size (int): # of words in vocabulary
-        @param freq_cutoff (int): if word occurs n < freq_cutoff times, drop the word
-        @returns vocab_entry (VocabEntry): VocabEntry instance produced from provided corpus
-        """
-        vocab_entry = VocabEntry()
-        word_freq = Counter(chain(*corpus))
-        valid_words = [w for w, v in word_freq.items() if v >= freq_cutoff]
-        print('number of word types: {}, number of word types w/ frequency >= {}: {}'
-              .format(len(word_freq), freq_cutoff, len(valid_words)))
-        top_k_words = sorted(valid_words, key=lambda w: word_freq[w], reverse=True)[:size]
-        for word in top_k_words:
-            vocab_entry.add(word)
-        return vocab_entry
