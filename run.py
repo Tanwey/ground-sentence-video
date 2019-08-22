@@ -6,9 +6,8 @@ Usage:
 
 Options:
     -h --help                               show this screen.
-    --train-src=<file>                      train source sentences
-    --dev-src=<file>                        dev source sentences
-    --vocab=<file>                          vocab file
+    --train-src-sents=<file>                train sentences
+    --dev-src-sents=<file>                  dev source sentences
     --batch-size=<int>                      batch size [default: 64]
     --hidden-size-textual-lstm=<int>        hidden size of textual lstm [default: 512]
     --hidden-size-visual-lstm=<int>         hidden size of visual lstm [default: 512]
@@ -39,9 +38,9 @@ def train(model: TGN, args: Dict):
     n_epochs = args['--max-epoch']
     valid_niter = args['--valid-niter']
 
-    pass
 
 
 if __name__ == '__main__':
     args = docopt(__doc__)
+    print(args[''])
 
