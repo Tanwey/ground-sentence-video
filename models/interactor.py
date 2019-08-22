@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import LSTM, LSTMCell, Linear, Parameter
 
 class Interactor(nn.Module):
-    def __init__(self, input_size: int, hidden_size_textual: int, hidden_size_visual: int,
+    def __init__(self, hidden_size_textual: int, hidden_size_visual: int,
                  hidden_size_ilstm: int):
         """
         :param input_size:

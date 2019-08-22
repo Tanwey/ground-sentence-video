@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.nn import Linear
 
 class Grounder(nn.Module):
-    def __init__(self, input_size: int, K: int):
+    def __init__(self, input_size: int, num_time_scales: int):
         super(Grounder, self).__init__()
-        self.projection = Linear(input_size, K, bias=True)
+        self.projection = Linear(input_size, num_time_scales, bias=True)
 
     def forward(self, input: torch.Tensor):
         """
