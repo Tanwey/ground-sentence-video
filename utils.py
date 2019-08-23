@@ -23,7 +23,7 @@ def pad_sents(sents, pad_token):
     return sents_padded
 
 
-def read_corpus(file_path, source):
+def read_corpus(file_path):
     """ Read file, where each sentence is dilineated by a `\n`.
     @param file_path (str): path to file containing corpus
     @param source (str): "tgt" or "src" indicating whether text
@@ -32,7 +32,7 @@ def read_corpus(file_path, source):
     data = []
     for line in open(file_path):
         sent = line.strip().split(' ')
-        data.append(['<s>'] + sent + ['</s>'])
+        data.append(sent)
 
     return data
 

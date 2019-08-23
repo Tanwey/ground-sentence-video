@@ -7,24 +7,26 @@ from models.visual_lstm_encoder import VisualLSTMEncoder
 from models.textual_lstm_encoder import TextualLSTMEncoder
 from models.grounder import Grounder
 
+from typing import Dict
+
 
 class TGN(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args: Dict):
         """
-        :param args:
+        :param args: Dict of experimental settings
         """
         super(TGN, self).__init__()
 
         word_embed_size = args['word-embed-size']
-        hidden_size_textual = args['hidden-size-textual']
-        hidden_size_visual = args['hidden-size-visual']
+        hidden_size_textual = args['hidden-size-textual-lstm']
+        hidden_size_visual = args['hidden-size-visual-lstm']
         hidden_size_ilstm = args['hidden-size-ilstm']
 
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
         self.cnn_encoder = CNNEncoder()
 
-        self.visual_lstm_encoder = VisualLSTMEncoder(embed_size=hidden_size_visual)
+        self.visual_lstm_encoder = VisualLSTMEncoder(input_size=None, hidden_size=hidden_size_visual)  # TODO: put the right size here
 
         self.grounder = Grounder(input_size=hidden_size_ilstm,
                                  num_time_scales=args['num-time-scales'])
