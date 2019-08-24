@@ -2,3 +2,4 @@
 models/__pycache__/
 data/
 scratch.py
+.DS_Store

@@ -19,10 +19,8 @@ Options:
     --valid-niter=<int>                     perform validation after how many iterations [default: 20]
 """
 
-
 import torch
 import torch.nn as nn
-from tqdm import tqdm
 from models.tgn import TGN
 from docopt import docopt
 from typing import Dict
@@ -30,6 +28,15 @@ from vocab import Vocab
 from utils import load_word_vectors, read_corpus
 import numpy as np
 import sys
+from data import NSGVDataset
+from torch.utils.data import DataLoader
+
+
+def find_binaryCE_weights(dataset: NSGVDataset):
+    pass
+    w0, w1 = None, None
+
+    return w0, w1
 
 
 def train(vocab: Vocab, args: Dict):
@@ -60,21 +67,21 @@ def train(vocab: Vocab, args: Dict):
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
 
-    dataset = []  # TODO
+    dataset = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/visual_data',
+                          num_time_scales=10, scale=4)
 
-    for i in range(n_iter):
-        for sents, imgs in dataset:
+    dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
+    for iteration in range(n_iter):
+
+        for i_batch, (sents, visual_input) in enumerate(dataset):
             optimizer.zero_grad()
-
-            scores = model(sents, imgs)
-
-
+            scores = model(sents, visual_input)
 
 
 
 if __name__ == '__main__':
     args = docopt(__doc__)
-    words, word_vectors = load_word_vectors('glove.840B.300d.txt')
+    words, word_vectors = load_word_vectors('data/glove.840B.300d.txt')
     vocab = Vocab(words)
     train(vocab, args)
