@@ -60,8 +60,17 @@ def train(vocab: Vocab, args: Dict):
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
 
+    dataset = []  # TODO
+
     for i in range(n_iter):
-        pass
+        for sents, imgs in dataset:
+
+            optimizer.zero_grad()
+
+            scores = model(sents, imgs)
+
+
+
 
 
 if __name__ == '__main__':

@@ -5,6 +5,8 @@ from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 import numpy as np
 from typing import List
+import os
+import cv2
 
 
 def pad_sents(sents, pad_token):
@@ -53,3 +55,23 @@ class ModelEmbeddings:
     def __init__(self, word_vectors_np, padding_idx=0):
         self.embedding = Embedding(len(word_vectors_np), embedding_dim=300, padding_idx=padding_idx)
         Embedding.weight = torch.from_numpy(word_vectors_np)
+
+
+
+def process_visual_data(visual_data_path):
+
+    os.mkdir('data/processed_videos')
+
+    video_files = os.listdir(visual_data_path)
+
+    for video_file in video_files:
+        cap = cv2.VideoCapture(os.path.join(visual_data_path, '{}.avi'.format(video_file)))
+        success = 1
+        frames = []
+
+        while success:
+            success, frame = cap.read()
+            frames.append(np.expand_dims(frame, axis=0))
+
+        frames = np.concatenate(frames)
+        np.save(video_file.replace('.avi', ''), frames)
