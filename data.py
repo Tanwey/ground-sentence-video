@@ -23,7 +23,7 @@ class NSGVDataset(torch.utils.data.Dataset):
 
         files = os.listdir(textual_data_path)
 
-        self.annotations = []
+        self.textual_data = []
         tokenizer = ToktokTokenizer()
 
         for file in files:
@@ -34,24 +34,26 @@ class NSGVDataset(torch.utils.data.Dataset):
                     start_frame, end_frame = row[0], row[1]
                     sents = set([sent for sent in row[6:] if len(sent) > 0])
                     sents = [tokenizer.tokenize(sent.lower()) for sent in sents]
-                    self.annotations += [(video_id, start_frame, end_frame, sent) for sent in sents]
+                    self.textual_data += [(video_id, start_frame, end_frame, sent) for sent in sents]
 
     def __len__(self):
-        return len(self.annotations)
+        return len(self.textual_data)
 
     def __getitem__(self, item):
 
-        video_id = self.annotations[item][0]
+        video_id = self.textual_data[item][0]
         visual_data = np.load(os.path.join(self.visual_data_path, video_id + '.npy'))  #TODO
 
         visual_data_tensor = torch.from_numpy(visual_data)
 
-        return (visual_data_tensor, self.annotations[item])
+        labels = None
 
+        return visual_data_tensor, self.textual_data[item], labels
 
 
 if __name__ == '__main__':
-    data = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/visual_data',
+    data = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/processed_visual_data',
                        num_time_scales=10, scale=4)
 
-    print(data.annotations[30:35])
+    a = data[14329]
+    print(a[1])

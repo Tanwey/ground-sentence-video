@@ -68,6 +68,7 @@ def process_visual_data():
     video_files = os.listdir(visual_data_path)
 
     for video_file in video_files:
+        print('processing %s...' % video_file)
         cap = cv2.VideoCapture(os.path.join(visual_data_path, video_file))
         success = 1
         frames = []
@@ -77,7 +78,7 @@ def process_visual_data():
 
         while success:
             if current_frame % 100 == 0:
-                print('Processing frame number %d' % current_frame)
+                print('\t***frame number %d' % current_frame)
 
             success, frame = cap.read()
             if success:

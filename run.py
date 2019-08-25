@@ -14,6 +14,8 @@ Options:
     --log-every=<int>                       log every [default: 10]
     --n-iter=<int>                          number of iterations of training [default: 200]
     --lr=<float>                            learning rate [default: 0.001]
+    --num-time-scales                       Parameter K in the paper
+    --time-scale                            Parameter ẟ in the paper
     --uniform-init=<float>                  uniformly initialize all parameters [default: 0.1]
     --save-to=<file>                        model save path [default: model.bin]
     --valid-niter=<int>                     perform validation after how many iterations [default: 20]
@@ -30,12 +32,27 @@ import numpy as np
 import sys
 from data import NSGVDataset
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 
-def find_binaryCE_weights(dataset: NSGVDataset):
-    pass
-    w0, w1 = None, None
+def find_BCE_weights(dataset: NSGVDataset, num_time_scales: int):
 
+    print('Calculating Binary Cross Entropy weights w0, w1...')
+
+    w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
+    w1 = torch.zeros([num_time_scales, ], dtype=torch.float32)
+
+    num_samples = len(dataset)
+    T = dataset[0][2].shape[0]
+
+    for i in tqdm(range(num_samples)):
+        _, _, y = dataset[i]  # Tensor with shape (T, K)
+        tmp = torch.sum(y, dim=0)
+        w0 += 1 - tmp
+        w1 += tmp
+
+    w0 = w0 / (num_samples * T)
+    w1 = w1 / (num_samples * T)
     return w0, w1
 
 
@@ -45,6 +62,8 @@ def train(vocab: Vocab, args: Dict):
     train_sents = read_corpus(args['--src-sents'])
     dev_sents = read_corpus(args['--dev-'])
     batch_size = int(args['--batch_size'])
+    delta = int(args['--time-scale'])
+    num_time_scales = int(args['--num-time-scales'])
 
     lr = float(args['--lr'])
     log_every = args['--log-every']
@@ -72,12 +91,15 @@ def train(vocab: Vocab, args: Dict):
 
     dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
+    w0, w1 = find_BCE_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+
     for iteration in range(n_iter):
-
-        for i_batch, (sents, visual_input) in enumerate(dataset):
+        for i_batch, (visual_input, textual_input, y) in enumerate(dataset):
             optimizer.zero_grad()
-            scores = model(sents, visual_input)
-
+            probs = model(textual_input, visual_input)  # shape: (n_batch, T, K)
+            loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
+            loss.backward()
+            optimizer.step()
 
 
 if __name__ == '__main__':
