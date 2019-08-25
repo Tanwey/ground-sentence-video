@@ -8,6 +8,8 @@ from typing import List
 import os
 import cv2
 import math
+import csv
+from matplotlib import pyplot as plt
 
 
 class ModelEmbeddings:
@@ -92,5 +94,44 @@ def process_visual_data():
         np.save(output_file, frames)
 
 
+def find_K():
+    textual_data_path = 'data/textual_data'
+
+    lengths = []
+    for file in os.listdir(textual_data_path):
+        with open(os.path.join(textual_data_path, file)) as tsvfile:
+            reader = csv.reader(tsvfile, delimiter='\t')
+            for row in reader:
+                start_frame, end_frame = int(row[0]), int(row[1])
+                lengths.append(end_frame - start_frame)
+
+    print(np.mean(lengths))
+    plt.hist(lengths)
+    plt.show()
+
+
+def compute_overlap(start_a, end_a, start_b, end_b):
+    """
+    :param start_a: start frame of first segment
+    :param end_a: end frame of first segment
+    :param start_b: start frame of second segment
+    :param end_b: end frame of second segment
+    :return: number of overlapping frames between two segments
+    """
+    if end_a < start_b or end_b < start_a:
+        return 0
+
+    if start_a <= start_b:
+        if start_b <= end_a <= end_b:
+            return end_a - start_b + 1
+        elif end_a > end_b:
+            return end_b - start_b + 1
+    else:
+        if start_a <= end_b <= end_a:
+            return end_b - start_a + 1
+        elif end_b > end_a:
+            return end_a - start_a + 1
+
+
 if __name__ == '__main__':
-    process_visual_data()
+    print(compute_overlap(100, 110, 103, 108))
