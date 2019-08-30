@@ -4,12 +4,13 @@ from gensim.test.utils import datapath, get_tmpfile
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 import numpy as np
-from typing import List
+from typing import Tuple, List
 import os
 import cv2
 import math
 import csv
 from matplotlib import pyplot as plt
+from skimage import transform
 
 
 class ModelEmbeddings:
@@ -60,14 +61,15 @@ def load_word_vectors(path):
     return words, word_vectors
 
 
-def process_visual_data():
-    visual_data_path = 'data/visual_data'
-    processed_visual_data_path = 'data/processed_visual_data'
+def process_visual_data_tacos(output_frame_size: Tuple):
+    visual_data_path = 'data/visual_data/TACoS'
+    processed_visual_data_path = 'data/processed_visual_data/TACoS'
 
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
     video_files = os.listdir(visual_data_path)
+    if '.DS_Store' in video_files: video_files.remove('.DS_Store')
 
     for video_file in video_files:
         print('processing %s...' % video_file)
@@ -77,6 +79,7 @@ def process_visual_data():
 
         current_frame = 0
         fps = math.ceil(cap.get(cv2.CAP_PROP_FPS))
+        print('Frame per second is %d' % fps)
 
         while success:
             if current_frame % 100 == 0:
@@ -84,7 +87,8 @@ def process_visual_data():
 
             success, frame = cap.read()
             if success:
-                if current_frame % fps == 0:
+                if current_frame % (fps * 5) == 0:  # capturing one frame every five seconds
+                    frame = transform.resize(frame, output_frame_size)  # down-sample the image
                     frames.append(np.expand_dims(frame, axis=0))
 
             current_frame += 1
@@ -92,6 +96,14 @@ def process_visual_data():
         frames = np.concatenate(frames)
         output_file = os.path.join(processed_visual_data_path, video_file.replace('.avi', '.npy'))
         np.save(output_file, frames)
+
+
+def process_visual_data_activitynet():
+    pass
+
+
+def process_visual_data_didemo():
+    pass
 
 
 def find_K():
@@ -134,4 +146,4 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
 
 if __name__ == '__main__':
-    print(compute_overlap(100, 110, 103, 108))
+    process_visual_data_tacos(output_frame_size=(224, 224))

@@ -44,10 +44,10 @@ class NSGVDataset(torch.utils.data.Dataset):
 
     def _generate_label(self, T, start_frame, end_frame):
         """
+        :param T: number of the frames of video
         :param item: The index of the sample for which the label is going to be computed
         :return: label with shape (T, K) where T is the length of the visual_input
         """
-        T = visual_data.shape[0]
         label = torch.zeros([T, ], dtype=torch.int32)
         for t in range(T):
             for k in range(self.num_time_scales):
@@ -72,6 +72,5 @@ class NSGVDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/processed_visual_data',
                        num_time_scales=10, delta=4, threshold=1.)  # TODO
-
     a = data[14329]
     print(a[1])

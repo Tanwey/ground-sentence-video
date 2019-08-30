@@ -1,19 +1,35 @@
-import torch
 import torch.nn as nn
-import torchvision
 from torchvision.models import vgg16
 
 
-class CNNEncoder(nn.Module):
+class VGG16(nn.Module):
     def __init__(self):
-        super(CNNEncoder, self).__init__()
-        pass
-
+        super(VGG16, self).__init__()
+        self.model = vgg16(pretrained=True, progress=True)
+        features = list(self.model.classifier.children())[:-1]  # removing the last layer
+        self.model.classifier = nn.Sequential(*features)
+        print(self.model)
 
     def forward(self, input):
         """
         :param input: A batch of images with shape
         :return: extracted features from
         """
+        self.model.eval()
+        return self.model(input)
 
 
+class InceptionV4(nn.Module):
+    def __init__(self):
+        super(InceptionV4, self).__init__()
+
+    def forward(self, input):
+        pass
+
+
+class C3D(nn.Module):
+    def __init__(self):
+        super(C3D, self).__init__()
+
+    def forward(self, input):
+        pass

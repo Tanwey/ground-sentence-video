@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from models.cnn_encoder import CNNEncoder
+from models.cnn_encoder import VGG16, InceptionV4
 from models.interactor import Interactor
 from models.visual_lstm_encoder import VisualLSTMEncoder
 from models.textual_lstm_encoder import TextualLSTMEncoder
@@ -24,7 +24,7 @@ class TGN(nn.Module):
 
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
-        self.cnn_encoder = CNNEncoder()
+        self.cnn_encoder = VGG16()
 
         self.visual_lstm_encoder = VisualLSTMEncoder(input_size=None, hidden_size=hidden_size_visual)  # TODO: put the right size here
 
@@ -37,16 +37,15 @@ class TGN(nn.Module):
 
     def forward(self, visual_input: torch.Tensor, textual_input: torch.Tensor):
         """
-
-        :param visual_input: a tensor containing a batch of input images (batch, )  # TODO: specify the shape
-        :param textual_input: a tensor containing a batch of words in the format of their
-        embeddings with shape (batch, N, word_embed_size)
-        :return:
+        :param visual_input: a tensor containing a batch of input images (n_batch, T, 224, 224, 3)
+        :param textual_input: a tensor containing a batch of embedded words
+        with shape (n_batch, N, sentence_length, word_embed_size: 300)
+        :return: grounding scores with shape (n_batch, T, K)
         """
-        features_v = self.cnn_encoder(visual_input)
-        h_s = self.textual_lstm_encoder(textual_input)
-        h_v = self.visual_lstm_encoder(features_v)
-        h_r = self.interactor(h_v, h_s)
+        features_v = self.cnn_encoder(visual_input)  # shape: (n_batch, T, 4096)
+        h_s = self.textual_lstm_encoder(textual_input)  # shape: (n_batch, N, hidden_size_textual)
+        h_v = self.visual_lstm_encoder(features_v)  # shape: (n_batch, T, hidden_size_visual)
+        h_r = self.interactor(h_v, h_s)  # shape: (n_batch, T, hidden_size_ilstm)
         scores = self.grounder(h_r)
 
         return scores
