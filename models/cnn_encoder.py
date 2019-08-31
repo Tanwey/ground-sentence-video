@@ -8,7 +8,6 @@ class VGG16(nn.Module):
         self.model = vgg16(pretrained=True, progress=True)
         features = list(self.model.classifier.children())[:-1]  # removing the last layer
         self.model.classifier = nn.Sequential(*features)
-        print(self.model)
 
     def forward(self, input):
         """

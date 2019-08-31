@@ -33,12 +33,12 @@ import sys
 from data import NSGVDataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from torchvision import transforms
 
 
-def find_BCE_weights(dataset: NSGVDataset, num_time_scales: int):
+def find_bce_weights(dataset: NSGVDataset, num_time_scales: int):
 
     print('Calculating Binary Cross Entropy weights w0, w1...')
-
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
     w1 = torch.zeros([num_time_scales, ], dtype=torch.float32)
 
@@ -87,11 +87,18 @@ def train(vocab: Vocab, args: Dict):
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
 
     dataset = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/visual_data',
-                          num_time_scales=10, scale=4)
+                          num_time_scales=10, delta=4, threshold=1.)  # TODO: change the threshold
 
-    dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    num_train = len(dataset)
+    indices = np.arange(num_train)
+    np.random.shuffle(indices)
 
-    w0, w1 = find_BCE_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+
+    train_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
+    val_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
+    test_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
+
+    w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
 
     for iteration in range(n_iter):
         for i_batch, (visual_input, textual_input, y) in enumerate(dataset):

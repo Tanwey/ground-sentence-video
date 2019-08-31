@@ -49,6 +49,10 @@ def read_corpus(file_path):
     return data
 
 
+def pad_videos():
+    pass
+
+
 def load_word_vectors(path):
     print('Loading Glove 300-d word vectors...')
     glove_file = datapath(path)
@@ -88,7 +92,7 @@ def process_visual_data_tacos(output_frame_size: Tuple):
             success, frame = cap.read()
             if success:
                 if current_frame % (fps * 5) == 0:  # capturing one frame every five seconds
-                    frame = transform.resize(frame, output_frame_size)  # down-sample the image
+                    frame = transform.resize(frame, output_frame_size)  # resize the image
                     frames.append(np.expand_dims(frame, axis=0))
 
             current_frame += 1

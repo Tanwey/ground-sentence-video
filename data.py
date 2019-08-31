@@ -5,16 +5,18 @@ import csv
 import numpy as np
 from nltk.tokenize.toktok import ToktokTokenizer
 from utils import compute_overlap
+from torchvision import transforms
+from PIL import Image
 
 
 class NSGVDataset(torch.utils.data.Dataset):
     def __init__(self, textual_data_path: str, visual_data_path: str, num_time_scales: int, delta: int,
                  threshold: float):
         """
-        :param textual_path: directory containing the annotations
-        :param visual_path: directory containing the videos
+        :param textual_data_path: directory containing the annotations
+        :param visual_data_path: directory containing the videos
         :param num_time_scales: K in the paper
-        :param scale: ẟ in the paper
+        :param delta: ẟ in the paper
         :param threshold: θ in the paper
         """
         super(NSGVDataset, self).__init__()
@@ -23,8 +25,11 @@ class NSGVDataset(torch.utils.data.Dataset):
         self.textual_data_path = textual_data_path
         self.visual_data_path = visual_data_path
         self.threshold = threshold
-
+        self.transforms = transforms.Compose([transforms.ToTensor(),
+                                              transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                                   std=[0.229, 0.224, 0.225])])
         files = os.listdir(textual_data_path)
+        if '.DS_Store' in files: files.remove('.DS_Store')
 
         self.textual_data = []
         tokenizer = ToktokTokenizer()
@@ -60,17 +65,17 @@ class NSGVDataset(torch.utils.data.Dataset):
 
         video_id, start_frame, end_frame = self.textual_data[item][0], self.textual_data[item][1], \
                                            self.textual_data[item][2]
-        visual_data = np.load(os.path.join(self.visual_data_path, video_id + '.npy'))  #TODO
+        visual_data = np.load(os.path.join(self.visual_data_path, video_id + '.npy'))
 
-        visual_data_tensor = torch.from_numpy(visual_data)
+        visual_data_tensor = torch.cat([self.transforms(img).unsqueeze(dim=0) for img in visual_data], dim=0)
 
-        labels = self._generate_label(visual_data_tensor.shape[0], start_frame, end_frame)
+        label = self._generate_label(visual_data_tensor.shape[0], start_frame, end_frame)
 
-        return visual_data_tensor, self.textual_data[item], labels
+        return {'visual data': visual_data_tensor, 'textual data': self.textual_data[item], 'label': label}
 
 
 if __name__ == '__main__':
-    data = NSGVDataset(textual_data_path='data/textual_data', visual_data_path='data/processed_visual_data',
-                       num_time_scales=10, delta=4, threshold=1.)  # TODO
+    data = NSGVDataset(textual_data_path='data/textual_data/TACoS', visual_data_path='data/processed_visual_data/TACoS',
+                       num_time_scales=10, delta=4, threshold=1.)
     a = data[14329]
-    print(a[1])
+    print(a['visual data'].shape)
