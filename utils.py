@@ -29,7 +29,7 @@ def pad_sents(sents, pad_token):
     than the max length sentence are padded out with the pad_token, such that
     each sentences in the batch now has equal length.
     """
-    longest = max([len(sent) for sent in sents])
+    longest = np.max([len(sent) for sent in sents])
     sents_padded = list(map(lambda sent: sent + [pad_token] * (longest - len(sent)), sents))
 
     return sents_padded
@@ -49,8 +49,18 @@ def read_corpus(file_path):
     return data
 
 
-def pad_videos():
-    pass
+def pad_visual_data(visual_data: List[torch.Tensor]):
+    """
+    :param visual_data: List of n_batch tensors each with shape (T_i, feature_dim)
+    :return:
+    """
+    feature_dim = visual_data[0].shape[1]
+    max_len = np.max([v.shape[0] for v in visual_data])
+    visual_data_padded = list(map(lambda v: torch.cat([v, torch.zeros(max_len - v.shape[0], feature_dim)]).
+                                  unsqueeze(dim=0),
+                                  visual_data))
+
+    return torch.cat(visual_data, dim=0)
 
 
 def load_word_vectors(path):

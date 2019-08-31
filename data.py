@@ -8,6 +8,8 @@ from utils import compute_overlap
 from torchvision import transforms
 from PIL import Image
 
+np.random.seed(42)
+
 
 class NSGVDataset(torch.utils.data.Dataset):
     def __init__(self, textual_data_path: str, visual_data_path: str, num_time_scales: int, delta: int,
@@ -50,7 +52,8 @@ class NSGVDataset(torch.utils.data.Dataset):
     def _generate_label(self, T, start_frame, end_frame):
         """
         :param T: number of the frames of video
-        :param item: The index of the sample for which the label is going to be computed
+        :param start_frame: The corresponding start frame for the annotation
+        :param end_frame:  The corresponding ending frame for the annotation
         :return: label with shape (T, K) where T is the length of the visual_input
         """
         label = torch.zeros([T, ], dtype=torch.int32)
@@ -77,5 +80,19 @@ class NSGVDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data = NSGVDataset(textual_data_path='data/textual_data/TACoS', visual_data_path='data/processed_visual_data/TACoS',
                        num_time_scales=10, delta=4, threshold=1.)
-    a = data[14329]
-    print(a['visual data'].shape)
+    #a = data[14329]
+    #print(a['visual data'].shape)
+    num_data = len(data)
+
+    num_train, num_val = int(num_data * 0.9), int(num_data * 0.005)
+    num_test = num_data - num_train - num_val
+
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(data, [num_train, num_val, num_test])
+    print(len(test_dataset))
+    print(len(train_dataset))
+    print(len(val_dataset))
+
+
+
+
+

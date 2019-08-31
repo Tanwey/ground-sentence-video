@@ -93,20 +93,28 @@ def train(vocab: Vocab, args: Dict):
     indices = np.arange(num_train)
     np.random.shuffle(indices)
 
+    num_data = len(dataset)
+    num_train, num_val = int(num_data * 0.9), int(num_data * 0.005)
+    num_test = num_data - num_train - num_val
 
-    train_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
-    val_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
-    test_loader = DataLoader(dataset=dataset, batch_size=batch_size, sampler=None, shuffle=True, num_workers=4)
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [num_train, num_val, num_test])
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
     w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
 
     for iteration in range(n_iter):
-        for i_batch, (visual_input, textual_input, y) in enumerate(dataset):
+        for batch_idx, (visual_input, textual_input, y) in enumerate(train_loader):
             optimizer.zero_grad()
             probs = model(textual_input, visual_input)  # shape: (n_batch, T, K)
             loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
             loss.backward()
             optimizer.step()
+
+            if iteration % valid_niter == 0:
+                pass
 
 
 if __name__ == '__main__':
