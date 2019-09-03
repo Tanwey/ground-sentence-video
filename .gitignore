@@ -4,4 +4,4 @@ data/
 scratch.py
 .DS_Store
 __pycache__/
-
+glove.6B.zip

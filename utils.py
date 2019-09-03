@@ -19,7 +19,7 @@ class ModelEmbeddings:
         Embedding.weight = torch.from_numpy(word_vectors_np)
 
 
-def pad_sents(sents, pad_token):
+def pad_textual_data(sents, pad_token):
     """ Pad list of sentences according to the longest sentence in the batch.
     :param sents (list[list[str]]): list of sentences, where each sentence
                                     is represented as a list of words
@@ -51,16 +51,17 @@ def read_corpus(file_path):
 
 def pad_visual_data(visual_data: List[torch.Tensor]):
     """
-    :param visual_data: List of n_batch tensors each with shape (T_i, feature_dim)
+    :param visual_data:
     :return:
     """
     feature_dim = visual_data[0].shape[1]
     max_len = np.max([v.shape[0] for v in visual_data])
+
     visual_data_padded = list(map(lambda v: torch.cat([v, torch.zeros(max_len - v.shape[0], feature_dim)]).
                                   unsqueeze(dim=0),
                                   visual_data))
 
-    return torch.cat(visual_data, dim=0)
+    return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
 
 
 def load_word_vectors(path):
@@ -160,4 +161,5 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
 
 if __name__ == '__main__':
-    process_visual_data_tacos(output_frame_size=(224, 224))
+    #process_visual_data_tacos(output_frame_size=(224, 224))
+    pass

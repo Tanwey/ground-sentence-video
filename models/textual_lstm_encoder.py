@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.nn import LSTM, LSTMCell
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from typing import List
 
 
 
@@ -15,13 +17,17 @@ class TextualLSTMEncoder(nn.Module):
         self.embed_size = embed_size
         self.encoder = LSTM(input_size=embed_size, hidden_size=hidden_size, bidirectional=False)
 
-    def forward(self, input: torch.Tensor):
+    def forward(self, input: torch.Tensor, lengths: List[int]):
         """
-        :param input: A batch of sentences with shape
+        :param input: A batch of sentences with shape (n_batch, N, embed_size)
+        :param lengths:
         :return: the encoded representation of the sentences
         """
-        outputs, (_, _) = self.encoder(input)
+        x = input.permute(1, 0, 2)  # shape (N, n_batch, embed_size)
+        x = pack_padded_sequence(x, lengths)
+        enc_hiddens, (_, _) = self.encoder(x)
+        enc_hiddens, _ = pad_packed_sequence(enc_hiddens)  # shape of enc_hiddens is (N, n_batch, hidden_size)
 
-        return outputs
+        return enc_hiddens
 
 
