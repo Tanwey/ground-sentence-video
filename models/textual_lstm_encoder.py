@@ -5,7 +5,6 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from typing import List
 
 
-
 class TextualLSTMEncoder(nn.Module):
     def __init__(self, embed_size, hidden_size):
         """

@@ -1,6 +1,5 @@
 import torch
 from torch.nn import Embedding
-from gensim.test.utils import datapath, get_tmpfile
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 import numpy as np
@@ -64,14 +63,20 @@ def pad_visual_data(visual_data: List[torch.Tensor]):
     return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
 
 
-def load_word_vectors(path):
-    print('Loading Glove 300-d word vectors...')
-    glove_file = datapath(path)
-    word2vec_glove_file = get_tmpfile("glove.word2vec.txt")
-    glove2word2vec(glove_file, word2vec_glove_file)
-    model = KeyedVectors.load_word2vec_format(word2vec_glove_file)
+def load_word_vectors(glove_file_path):
+    print('Loading Glove word vectors...')
+
+    if not os.path.exists('glove.word2vec.txt'):
+        glove2word2vec(glove_file_path, 'glove.word2vec.txt')
+
+    model = KeyedVectors.load_word2vec_format('glove.word2vec.txt')
     words = list(model.vocab.keys())
-    word_vectors = np.concatenate([model[word] for word in words])
+    dim = len(model[words[0]])
+    print('dimension of word vectors', dim)
+    word_vectors = [np.zeros([2, dim])] + [model[word].reshape(1, -1) for word in words]
+    word_vectors = np.concatenate(word_vectors, axis=0)
+    print('shape of word vectors', word_vectors.shape)
+    print('Word vectors were loaded successfully...')
 
     return words, word_vectors
 
@@ -85,6 +90,8 @@ def process_visual_data_tacos(output_frame_size: Tuple):
 
     video_files = os.listdir(visual_data_path)
     if '.DS_Store' in video_files: video_files.remove('.DS_Store')
+
+    f = open('fps.txt', 'w')
 
     for video_file in video_files:
         print('processing %s...' % video_file)
@@ -105,12 +112,16 @@ def process_visual_data_tacos(output_frame_size: Tuple):
                 if current_frame % (fps * 5) == 0:  # capturing one frame every five seconds
                     frame = transform.resize(frame, output_frame_size)  # resize the image
                     frames.append(np.expand_dims(frame, axis=0))
-
+            else:
+                break
             current_frame += 1
 
         frames = np.concatenate(frames)
         output_file = os.path.join(processed_visual_data_path, video_file.replace('.avi', '.npy'))
+        f.write(video_file.replace('.avi', '') + '\t' + str(current_frame))
         np.save(output_file, frames)
+
+    f.close()
 
 
 def process_visual_data_activitynet():
@@ -161,5 +172,5 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
 
 if __name__ == '__main__':
-    #process_visual_data_tacos(output_frame_size=(224, 224))
+    process_visual_data_tacos(output_frame_size=(224, 224))
     pass

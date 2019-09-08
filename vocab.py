@@ -11,11 +11,13 @@ class Vocab(object):
         """ Init VocabEntry Instance.
         :param words: list of words
         """
+        print('Creating vocabulary...')
         self.word2id = dict()
         self.word2id['<pad>'] = 0   # Pad Token
+        self.word2id['<unk>'] = 1  # Unk token
 
         for i, word in enumerate(words):
-            self.word2id[word] = i+1
+            self.word2id[word] = i+2
 
         self.id2word = {v: k for k, v in self.word2id.items()}
 
@@ -25,7 +27,7 @@ class Vocab(object):
         @param word (str): word to look up.
         @returns index (int): index of word
         """
-        return self.word2id.get(word, self.word2id['<pad>'])
+        return self.word2id.get(word, self.word2id['<unk>'])
 
     def __contains__(self, word):
         """ Check if word is captured by VocabEntry.
@@ -71,10 +73,9 @@ class Vocab(object):
             return self[word]
 
     def words2indices(self, sents):
-        """ Convert list of words or list of sentences of words
-        into list or list of list of indices.
-        @param sents (list[str] or list[list[str]]): sentence(s) in words
-        @return word_ids (list[int] or list[list[int]]): sentence(s) in indices
+        """ Convert list of words or list of sentences of words into list or list of list of indices.
+        :param sents: (list[str] or list[list[str]]): sentence(s) in words
+        :return word_ids (list[int] or list[list[int]]): sentence(s) in indices
         """
         if type(sents[0]) == list:
             return [[self[w] for w in s] for s in sents]
@@ -94,10 +95,10 @@ class Vocab(object):
         :param sents: list of sentences (words)
         :param device: device on which to load the tesnor, i.e. CPU or GPU
 
-        :returns sents_var: tensor of (max_sentence_length, batch_size)
+        :returns sents_var: tensor of (batch_size, max_sentence_length)
         """
         word_ids = self.words2indices(sents)
         sents_t = pad_textual_data(word_ids, self['<pad>'])
         sents_var = torch.tensor(sents_t, dtype=torch.long, device=device)
-        return torch.t(sents_var)
+        return sents_var
 

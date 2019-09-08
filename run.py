@@ -2,23 +2,25 @@
 run.py: Run the Temporally Grounding Network (TGN) model
 
 Usage:
-    run.py train --textual-data-path=<file> --visual-data-path=<file> [options]
+    run.py train --textual-data-path=<dir> --visual-data-path=<dir> [options]
     run.py test --textual-data-path=<file> --visual-data-path=<file> [options]
+
 Options:
-    -h --help                               show this screen.
-    --textual-data-path=<file>              directory containing the annotations
-    --visual-data-path=<file>               directory containing the videosakhe gheyre unam mishe
+    -h --help                               show this screen
+    --textual-data-path=<dir>               directory containing the annotations
+    --visual-data-path=<dir>                directory containing the videos
     --batch-size=<int>                      batch size [default: 64]
     --hidden-size-textual-lstm=<int>        hidden size of textual lstm [default: 512]
     --hidden-size-visual-lstm=<int>         hidden size of visual lstm [default: 512]
+    --hidden-size-ilstm=<int>               hidden size of ilstm [default: 512]
     --log-every=<int>                       log every [default: 10]
     --n-iter=<int>                          number of iterations of training [default: 200]
     --lr=<float>                            learning rate [default: 0.001]
     --num-time-scales=<int>                 Parameter K in the paper
     --delta=<int>                           Parameter ẟ in the paper
     --threshold=<float>                     Parameter θ in the paper
-    --save-to=<file>                        model save path [default: model.bin]
     --valid-niter=<int>                     perform validation after how many iterations [default: 20]
+    --word-embed-size=<int>                 size of the glove word vectors [default: 50]
 """
 
 import torch
@@ -30,12 +32,15 @@ from vocab import Vocab
 from utils import load_word_vectors, read_corpus, pad_visual_data, pad_textual_data
 import numpy as np
 import sys
-from data import NSGVDataset
+from data import TACoS
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from time import time
+from torch.nn.init import xavier_normal_, normal_
+#from torch.utils.tensorboard import SummaryWriter
 
 
-def find_bce_weights(dataset: NSGVDataset, num_time_scales: int):
+def find_bce_weights(dataset: TACoS, num_time_scales: int):
     print('Calculating Binary Cross Entropy weights w0, w1...')
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
     w1 = torch.zeros([num_time_scales, ], dtype=torch.float32)
@@ -57,35 +62,42 @@ def find_bce_weights(dataset: NSGVDataset, num_time_scales: int):
 def eval(model: TGN, valloader: DataLoader, batch_size: int):
     was_training = model.training
 
-    with torch.no_grad():
-        for batch_idx, (visual_data, textual_data, y) in enumerate(valloader):
-            probs = model(visual_data, textual_data)
-            loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
-            loss.item()
+    # with torch.no_grad():
+    #     for batch_idx, (visual_data, textual_data, y) in enumerate(valloader):
+    #         probs = model(visual_data, textual_data)
+    #         loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
+    #         loss.item()
+    #
+    # if was_training:
+    #     model.train()
+    #
+    # return loss
 
-    if was_training:
-        model.train()
 
-
-def train(vocab: Vocab, args: Dict):
+def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     n_iter = int(args['--n-iter'])
     valid_niter = int(args['--valid-niter'])
     textual_data_path = args['--textual-data-path']
     visual_data_path = args['--visual-data-path']
-    batch_size = int(args['--batch_size'])
+    batch_size = int(args['--batch-size'])
     delta = int(args['--delta'])
     num_time_scales = int(args['--num-time-scales'])
     lr = float(args['--lr'])
     log_every = int(args['--log-every'])
-    threshold = float(args['--log-every'])
+    threshold = float(args['--threshold'])
 
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
+    embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors), requires_grad=False)
     model = TGN(args)
 
     model.train()
 
     for p in model.parameters():
-        p.data.xavier_normal_()
+        if p.requires_grad:
+            if len(p.data.shape) > 1:
+                xavier_normal_(p.data)
+            else:
+                normal_(p.data)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('use device: %s' % device, file=sys.stderr)
@@ -94,42 +106,51 @@ def train(vocab: Vocab, args: Dict):
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
 
-    dataset = NSGVDataset(textual_data_path=textual_data_path, visual_data_path=visual_data_path,
-                          num_time_scales=num_time_scales, delta=delta, threshold=threshold)
+    dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path,
+                    num_time_scales=num_time_scales, delta=delta, threshold=threshold)
 
-    #num_data = len(dataset)
-    #num_train, num_val = int(num_data * 0.9), int(num_data * 0.005)
-    #train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    #val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    #test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    #writer = SummaryWriter()
+    #writer.add_graph(model, )
 
-    w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+    #w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+
+    train_time = begin_time = time()
+    print('Begin training...')
 
     for iteration in range(n_iter):
 
         # getting visual_data, textual_data, labels each one as a list
-        visual_data, textual_data, y = next(dataset.data_iter(batch_size, 'train'))
-
-        visual_data_tensor = pad_visual_data(visual_data)  # tensor with shape (n_batch, T, 224, 224, 3)
-        textual_data_padded = pad_textual_data(textual_data, vocab.word2id['<pad>'])
-
-        print(textual_data_padded.shape)
+        textual_data, visual_data, y = next(dataset.data_iter(batch_size, 'train'))
+        lengths_t = [len(t) for t in textual_data]
+        textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
+        textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
         optimizer.zero_grad()
-        probs = model(textual_data, visual_data)  # shape: (n_batch, T, K)
-        loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
-        loss.backward()
-        optimizer.step()
+        probs = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
+        break
+        #loss_train = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
+        #loss_train.backward()
+        #optimizer.step()
 
-        if iteration % log_every == 0:
-            pass
+        #if iteration % log_every == 0:
+        #    print('Iteration number %d, loss train: %f' % (iteration, loss_train.item()))
+            #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
-        if iteration % valid_niter == 0:
-            eval(val_loader, batch_size=batch_size)
+        #if iteration % valid_niter == 0:
+        #    loss_val = eval(dataset, batch_size=batch_size)
+        #    writer.add_scalar('Loss/val', loss_val)
+
+        #writer.close()
 
 
 if __name__ == '__main__':
     args = docopt(__doc__)
-    words, word_vectors = load_word_vectors('glove.840B.300d.txt')
+    word_embed_size = int(args['--word-embed-size'])
+    #words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    with open('vocab.txt', 'r') as f:
+        words = f.readlines()
+    print(len(words))
+    word_vectors = np.zeros([len(words)+2, 50])
+
     vocab = Vocab(words)
-    train(vocab, args)
+    train(vocab, word_vectors, args)
