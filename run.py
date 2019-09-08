@@ -87,7 +87,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     threshold = float(args['--threshold'])
 
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
-    embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors), requires_grad=False)
+    embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors).to(torch.float32), requires_grad=False)
     model = TGN(args)
 
     model.train()

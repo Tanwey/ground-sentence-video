@@ -27,6 +27,6 @@ class TextualLSTMEncoder(nn.Module):
         enc_hiddens, (_, _) = self.encoder(x)
         enc_hiddens, _ = pad_packed_sequence(enc_hiddens)  # shape of enc_hiddens is (N, n_batch, hidden_size)
 
-        return enc_hiddens
+        return enc_hiddens.permute(1, 0, 2)  # shape (n_batch, N, hidden_size)
 
 

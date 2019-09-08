@@ -28,9 +28,9 @@ class Interactor(nn.Module):
 
     def forward(self, h_v: torch.Tensor, h_s: torch.Tensor):
         """
-        :param h_v: with shape (batch_size, T, hidden_size_visual)
-        :param h_s: with shape (batch_size, N, hidden_size_textual)
-        :return: outputs of the iLSTM with shape (batch, T, hidden_size_ilstm)
+        :param h_v: with shape (n_batch, T, hidden_size_visual)
+        :param h_s: with shape (n_batch, N, hidden_size_textual)
+        :return: outputs of the iLSTM with shape (n_batch, T, hidden_size_ilstm)
         """
         batch_size, T, N = h_v.shape[0], h_v.shape[1], h_s.shape[1]
 
@@ -41,16 +41,19 @@ class Interactor(nn.Module):
         outputs = []
 
         for t in range(T):
+            beta_t = self.projection_w(torch.tanh(self.projection_R(h_r_prev) +
+                                                  self.projection_S(h_s) +
+                                                  self.projection_V(h_v[:, t, :]).unsqueeze(dim=1))
+                                       ).squeeze(2)  # shape (n_batch, N)
 
-            # Computing beta_t with shape (batch, N)
-            beta_t =  self.projection_w(torch.tanh(self.projection_R(h_r_prev) +
-                                                   self.projection_S(h_s) +
-                                                   self.projection_V(h_v[t]))
-                                        ).squeeze(2)
+            print('beta_t shape', beta_t.shape)
 
-            alpha_t = torch.softmax(beta_t, dim=0)  # shape: (batch, N)
-            H_t_s = torch.dot(alpha_t, h_s)
-            r_t = torch.cat([h_v[t], H_t_s])
+            alpha_t = torch.softmax(beta_t, dim=0)  # shape: (n_batch, N)
+            H_t_s = alpha_t.unsqueeze(dim=2) * h_s
+            print('H_t_s shape', H_t_s.shape)
+
+            r_t = torch.cat([h_v[:, t, :].repeat().unsqueeze(dim=1), H_t_s], dim=1)
+            print('r_t shape', r_t.shape)
 
             h_r_new, c_r_new = self.iLSTM(r_t, (h_r_prev, c_r_prev))
             outputs.append(h_r_new.unsqueeze(1))

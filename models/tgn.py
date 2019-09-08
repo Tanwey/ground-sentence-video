@@ -50,10 +50,19 @@ class TGN(nn.Module):
         features_v_cat = self.cnn_encoder(visual_input_cat)  # shape: (n_batch, T, feature_size)
         print('shape of cat features', features_v_cat.shape)
         features_v = torch.split(features_v_cat, lengths_v)
-        features_v_padded = pad_visual_data(features_v)
 
-        h_s = self.textual_lstm_encoder(textual_input)  # shape: (n_batch, N, hidden_size_textual)
-        h_v = self.visual_lstm_encoder(features_v)  # shape: (n_batch, T, hidden_size_visual)
+        features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
+        lengths_v = sorted(lengths_v, reverse=True)
+        features_v_padded = pad_visual_data(features_v)  # shape (n_batch, T, dim_feature)
+
+        print('features_v padded shape', features_v_padded.shape)
+
+        h_s = self.textual_lstm_encoder(textual_input, lengths_t)  # shape: (n_batch, N, hidden_size_textual)
+        print('h_s shape', h_s.shape)
+
+        h_v = self.visual_lstm_encoder(features_v_padded, lengths_v)  # shape: (n_batch, T, hidden_size_visual)
+        print('h_v shape', h_v.shape)
+
         h_r = self.interactor(h_v, h_s)  # shape: (n_batch, T, hidden_size_ilstm)
         scores = self.grounder(h_r)
 
