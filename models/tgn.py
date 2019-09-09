@@ -45,7 +45,7 @@ class TGN(nn.Module):
         :return: grounding scores with shape (n_batch, T, K)
         """
         lengths_v = [v.shape[0] for v in visual_input]
-        visual_input_cat = torch.cat(visual_input, dim=0).permute(0, 3, 1, 2).to(torch.float32)
+        visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
 
         features_v_cat = self.cnn_encoder(visual_input_cat)  # shape: (n_batch, T, feature_size)
         print('shape of cat features', features_v_cat.shape)

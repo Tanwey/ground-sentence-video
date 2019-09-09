@@ -45,6 +45,7 @@ class TACoS(torch.utils.data.Dataset):
 
         self.num_frames = dict()
 
+        # loading the textual data
         for file in files:
             with open(os.path.join(textual_data_path, file)) as tsvfile:
                 video_id = file.replace('.aligned.tsv', '')
@@ -55,7 +56,6 @@ class TACoS(torch.utils.data.Dataset):
                     sents = [tokenizer.tokenize(sent.lower()) for sent in sents]
                     self.textual_data += [Annotation(video_id=video_id, start_frame=start_frame, end_frame=end_frame,
                                                     sent=sent) for sent in sents]
-                    #[(video_id, start_frame, end_frame, sent) for sent in sents]
 
         index_array = list(range(len(self.textual_data)))
         np.random.shuffle(index_array)
@@ -75,10 +75,11 @@ class TACoS(torch.utils.data.Dataset):
         files = os.listdir(visual_data_path)
         if '.DS_Store' in files: files.remove('.DS_Store')
 
-        print('Loading preprocessed visual data...')
+        # loading and preprocessing visual data
         for file in files:
             path = os.path.join(visual_data_path, file)
-            self.visual_data[file.replace('.npy', '')] = np.load(path)
+            video = np.load(path)
+            self.visual_data[file.replace('.npy', '')] = self._transform(video)
 
     def __len__(self):
         return len(self.textual_data)
@@ -108,35 +109,36 @@ class TACoS(torch.utils.data.Dataset):
         return labels
 
     def __getitem__(self, item):
-
-        video_id, start_frame, end_frame = self.textual_data[item][0], self.textual_data[item][1], \
-                                           self.textual_data[item][2]
-        visual_data = np.load(os.path.join(self.visual_data_path, video_id + '.npy'))
-        visual_data_tensor = torch.cat([self.transforms(img).unsqueeze(dim=0) for img in visual_data], dim=0)
-        #label = self._generate_labels(visual_data_tensor.shape[0], start_frame, end_frame)
-
-        #return {'visual data': visual_data_tensor, 'textual data': self.textual_data[item], 'label': label}
+        s = self.textual_data[item]
+        video_id, start_frame, end_frame = s.video_id, s.start_frame, s.end_frame
+        visual_data = self.visual_data[video_id]  # torch.Tensor
+        label = self._generate_labels([visual_data], [s])
+        return {'visual data': visual_data, 'textual data': s, 'label': label}
 
     def data_iter(self, batch_size: int, set: str):
-
         index_array = None
-
         if set == 'train':
             index_array = self.train_indices
         elif set == 'val':
             index_array = self.val_indices
 
         batch_num = ceil(len(index_array) / batch_size)
-
         for i in range(batch_num):
             indices = index_array[i * batch_size: (i + 1) * batch_size]
             textual_data = [self.textual_data[idx] for idx in indices]
             textual_data = sorted(textual_data, key=lambda s: len(s.sent), reverse=True)
-            visual_data = [torch.from_numpy(self.visual_data[s.video_id]) for s in textual_data]
+            visual_data = [self.visual_data[s.video_id] for s in textual_data]
             labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
 
             textual_data = [s.sent for s in textual_data]
             yield textual_data, visual_data, labels
+
+    def _transform(self, video):
+        """
+        :param video: np.ndarray with shape (T, 224, 224, 3)
+        :return torch.Tensor with shape (T, 3, 224, 224)
+        """
+        return torch.cat([self.transforms(img).unsqueeze(dim=0) for img in video], dim=0)
 
 
 if __name__ == '__main__':

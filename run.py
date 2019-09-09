@@ -49,7 +49,8 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int):
     T = dataset[0][2].shape[0]
 
     for i in tqdm(range(num_samples)):
-        _, _, y = dataset[i]  # Tensor with shape (T, K)
+        print(type(dataset[i]))
+        #_, _, y = dataset[i]  # Tensor with shape (T, K)
         tmp = torch.sum(y, dim=0)
         w0 += 1 - tmp
         w1 += tmp
@@ -127,7 +128,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         optimizer.zero_grad()
         probs = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
-        break
+
         #loss_train = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
         #loss_train.backward()
         #optimizer.step()
