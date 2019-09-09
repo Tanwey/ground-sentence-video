@@ -112,8 +112,8 @@ class TACoS(torch.utils.data.Dataset):
         s = self.textual_data[item]
         video_id, start_frame, end_frame = s.video_id, s.start_frame, s.end_frame
         visual_data = self.visual_data[video_id]  # torch.Tensor
-        label = self._generate_labels([visual_data], [s])
-        return {'visual data': visual_data, 'textual data': s, 'label': label}
+        label = self._generate_labels([visual_data], [s])[0]
+        return visual_data, s, label
 
     def data_iter(self, batch_size: int, set: str):
         index_array = None
@@ -144,11 +144,4 @@ class TACoS(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data = TACoS(textual_data_path='data/textual_data/TACoS', visual_data_path='data/processed_visual_data/TACoS',
                  num_time_scales=10, delta=4, threshold=1.)
-    print(len(data))
-
-
-
-
-
-
 

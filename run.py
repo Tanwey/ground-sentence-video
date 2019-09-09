@@ -43,21 +43,20 @@ from torch.nn.init import xavier_normal_, normal_
 def find_bce_weights(dataset: TACoS, num_time_scales: int):
     print('Calculating Binary Cross Entropy weights w0, w1...')
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
-    w1 = torch.zeros([num_time_scales, ], dtype=torch.float32)
 
     num_samples = len(dataset)
-    T = dataset[0][2].shape[0]
+    time_steps = 0
 
     for i in tqdm(range(num_samples)):
-        print(type(dataset[i]))
-        #_, _, y = dataset[i]  # Tensor with shape (T, K)
-        tmp = torch.sum(y, dim=0)
-        w0 += 1 - tmp
-        w1 += tmp
+        _, _, label = dataset[i]
+        T = label.shape[0]
+        time_steps += T
+        tmp = torch.sum(label, dim=0).to(torch.float32)
+        w0 += T - tmp
 
-    w0 = w0 / (num_samples * T)
-    w1 = w1 / (num_samples * T)
-    return w0, w1
+    w0 = w0 / time_steps
+    print('w0 is', w0)
+    return w0, 1-w0
 
 
 def eval(model: TGN, valloader: DataLoader, batch_size: int):
@@ -113,7 +112,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     #writer = SummaryWriter()
     #writer.add_graph(model, )
 
-    #w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+    w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
 
     train_time = begin_time = time()
     print('Begin training...')
