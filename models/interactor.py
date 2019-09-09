@@ -32,28 +32,30 @@ class Interactor(nn.Module):
         :param h_s: with shape (n_batch, N, hidden_size_textual)
         :return: outputs of the iLSTM with shape (n_batch, T, hidden_size_ilstm)
         """
-        batch_size, T, N = h_v.shape[0], h_v.shape[1], h_s.shape[1]
+        n_batch, T, N = h_v.shape[0], h_v.shape[1], h_s.shape[1]
 
         # h_r_{t-1} in the paper
-        h_r_prev = torch.zeros([batch_size, 1, self.hidden_size_ilstm])
-        c_r_prev = torch.zeros([batch_size, 1, self.hidden_size_ilstm])
+        h_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm])
+        c_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm])
 
         outputs = []
 
         for t in range(T):
-            beta_t = self.projection_w(torch.tanh(self.projection_R(h_r_prev) +
+            beta_t = self.projection_w(torch.tanh(self.projection_R(h_r_prev).unsqueeze(dim=1) +
                                                   self.projection_S(h_s) +
                                                   self.projection_V(h_v[:, t, :]).unsqueeze(dim=1))
                                        ).squeeze(2)  # shape (n_batch, N)
 
-            print('beta_t shape', beta_t.shape)
+            #print('beta_t shape', beta_t.shape)
 
             alpha_t = torch.softmax(beta_t, dim=0)  # shape: (n_batch, N)
-            H_t_s = alpha_t.unsqueeze(dim=2) * h_s
-            print('H_t_s shape', H_t_s.shape)
 
-            r_t = torch.cat([h_v[:, t, :].repeat().unsqueeze(dim=1), H_t_s], dim=1)
-            print('r_t shape', r_t.shape)
+            # H_ts_s with shape (n_batch, hidden_size_textual)
+            H_t_s = torch.bmm(h_s.permute(0, 2, 1), alpha_t.unsqueeze(dim=2)).squeeze(dim=2)
+            #print('H_t_s shape', H_t_s.shape)
+
+            r_t = torch.cat([h_v[:, t, :], H_t_s], dim=1)  # shape (n_batch, hidden_size_textual+hidden_size_visual)
+            #print('r_t shape', r_t.shape)
 
             h_r_new, c_r_new = self.iLSTM(r_t, (h_r_prev, c_r_prev))
             outputs.append(h_r_new.unsqueeze(1))

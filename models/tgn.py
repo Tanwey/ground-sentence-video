@@ -64,6 +64,9 @@ class TGN(nn.Module):
         print('h_v shape', h_v.shape)
 
         h_r = self.interactor(h_v, h_s)  # shape: (n_batch, T, hidden_size_ilstm)
+        print('h_r shape', h_r.shape)
+
         scores = self.grounder(h_r)
+        print('scores shape', scores.shape)
 
         return scores

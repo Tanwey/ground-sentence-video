@@ -11,7 +11,7 @@ class Grounder(nn.Module):
     def forward(self, input: torch.Tensor):
         """
         :param input: Output of iLSTM with the shape (batch_size, T, hidden_size_iLSTM)
-        :return:
+        :return C_T: torch.Tensor with shape (n_batch, T, num_time_scales)
         """
         C_t = torch.sigmoid(self.projection(input))
 
