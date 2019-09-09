@@ -50,7 +50,6 @@ class TGN(nn.Module):
         """
         lengths_v = [v.shape[0] for v in visual_input]
         mask = self._generate_videos_mask(lengths_v)
-        print('mask shape', mask.shape)
 
         visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
 
@@ -75,7 +74,7 @@ class TGN(nn.Module):
         n_batch = len(lengths)
         max_len = np.max(lengths)
 
-        mask = torch.zeros(n_batch, max_len, self.num_time_scales)
+        mask = torch.ones(n_batch, max_len, self.num_time_scales)
 
         for i in range(len(lengths)):
             mask[i, lengths[i]:, :] = 0

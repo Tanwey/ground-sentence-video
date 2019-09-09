@@ -41,7 +41,7 @@ from torch.nn.init import xavier_normal_, normal_
 
 
 def find_bce_weights(dataset: TACoS, num_time_scales: int):
-    print('Calculating Binary Cross Entropy weights w0, w1...')
+    print('Calculating Binary Cross Entropy weights w0, w1...', file=sys.stderr)
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
 
     num_samples = len(dataset)
@@ -55,7 +55,7 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int):
         w0 += T - tmp
 
     w0 = w0 / time_steps
-    print('w0 is', w0)
+
     return w0, 1-w0
 
 
@@ -116,6 +116,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
     w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
 
+    cum_samples = reported_samples = 0
     train_time = begin_time = time()
     print('Begin training...')
 
@@ -123,24 +124,33 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         # getting visual_data, textual_data, labels each one as a list
         textual_data, visual_data, y = next(dataset.data_iter(batch_size, 'train'))
-        print('labels shape', y.shape)
         lengths_t = [len(t) for t in textual_data]
         textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
         textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
         optimizer.zero_grad()
         probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
-        loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask
+        loss = -torch.sum((y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))*mask)
+        cum_samples += batch_size
+        reported_samples += batch_size
+
         loss.backward()
-        #optimizer.step()
-        break
-        #if iteration % log_every == 0:
-        #    print('Iteration number %d, loss train: %f' % (iteration, loss_train.item()))
+        optimizer.step()
+
+        if iteration % log_every == 0:
+            print('Iteration number %d, loss train: %f, '
+                  'speed %.2f samples/sec, time elapsed %.2f sec' % (iteration,
+                                                                loss.item(),
+                                                                reported_samples / (time() - train_time),
+                                                                time() - begin_time))
+
+            reported_samples = 0
+            train_time = time()
             #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
-        #if iteration % valid_niter == 0:
-        #    loss_val = eval(dataset, batch_size=batch_size)
-        #    writer.add_scalar('Loss/val', loss_val)
+        # if iteration % valid_niter == 0:
+        #     loss_val = eval(dataset, batch_size=batch_size)
+            #writer.add_scalar('Loss/val', loss_val)
 
         #writer.close()
 
