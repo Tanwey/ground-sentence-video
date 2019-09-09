@@ -34,20 +34,6 @@ def pad_textual_data(sents, pad_token):
     return sents_padded
 
 
-def read_corpus(file_path):
-    """ Read file, where each sentence is dilineated by a `\n`.
-    @param file_path (str): path to file containing corpus
-    @param source (str): "tgt" or "src" indicating whether text
-        is of the source language or target language
-    """
-    data = []
-    for line in open(file_path):
-        sent = line.strip().split(' ')
-        data.append(sent)
-
-    return data
-
-
 def pad_visual_data(visual_data: List[torch.Tensor]):
     """
     :param visual_data:
@@ -61,6 +47,22 @@ def pad_visual_data(visual_data: List[torch.Tensor]):
                                   visual_data))
 
     return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
+
+
+def pad_labels(labels: List[torch.Tensor]):
+    """
+    :param labels: a list with length num_labels of torch.Tensor
+    :returns labels_padded: returns a torch.Tensor with shape (num_labels, T, K)
+    """
+    num_labels = len(labels)
+    max_len = np.max([label.shape[0] for label in labels])
+    K = labels[0].shape[1]
+    labels_padded = torch.zeros([num_labels, max_len, K])
+
+    for i in range(num_labels):
+        labels_padded[i, :labels[i].shape[0], :] = labels[i]
+
+    return labels_padded
 
 
 def load_word_vectors(glove_file_path):

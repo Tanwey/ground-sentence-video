@@ -9,6 +9,7 @@ from torchvision import transforms
 from math import ceil
 from typing import List
 from collections import namedtuple
+from utils import pad_labels
 
 np.random.seed(42)
 
@@ -106,7 +107,7 @@ class TACoS(torch.utils.data.Dataset):
                         label[t, k] = 1
             labels.append(label)
 
-        return labels
+        return pad_labels(labels)  # torch.Tensor with shape (num_labels, T, K)
 
     def __getitem__(self, item):
         s = self.textual_data[item]

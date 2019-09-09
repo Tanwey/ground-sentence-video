@@ -29,7 +29,7 @@ from models.tgn import TGN
 from docopt import docopt
 from typing import Dict
 from vocab import Vocab
-from utils import load_word_vectors, read_corpus, pad_visual_data, pad_textual_data
+from utils import load_word_vectors, pad_visual_data, pad_textual_data
 import numpy as np
 import sys
 from data import TACoS
@@ -88,6 +88,8 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
     embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors).to(torch.float32), requires_grad=False)
+
+
     model = TGN(args)
 
     model.train()
@@ -121,17 +123,17 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         # getting visual_data, textual_data, labels each one as a list
         textual_data, visual_data, y = next(dataset.data_iter(batch_size, 'train'))
+        print('labels shape', y.shape)
         lengths_t = [len(t) for t in textual_data]
         textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
         textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
         optimizer.zero_grad()
-        probs = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
-
-        #loss_train = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
-        #loss_train.backward()
+        probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
+        loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask
+        loss.backward()
         #optimizer.step()
-
+        break
         #if iteration % log_every == 0:
         #    print('Iteration number %d, loss train: %f' % (iteration, loss_train.item()))
             #writer.add_scalar('Loss/train', loss_train.item(), iteration)
