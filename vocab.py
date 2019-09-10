@@ -1,6 +1,7 @@
 from typing import List
 import torch
 from utils import pad_textual_data
+import sys
 
 
 class Vocab(object):
@@ -11,7 +12,7 @@ class Vocab(object):
         """ Init VocabEntry Instance.
         :param words: list of words
         """
-        print('Creating vocabulary...')
+        print('Creating vocabulary...', file=sys.stderr)
         self.word2id = dict()
         self.word2id['<pad>'] = 0   # Pad Token
         self.word2id['<unk>'] = 1  # Unk token

@@ -37,11 +37,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from time import time
 from torch.nn.init import xavier_normal_, normal_
-#from torch.utils.tensorboard import SummaryWriter
 
 
 def find_bce_weights(dataset: TACoS, num_time_scales: int):
-    print('Calculating Binary Cross Entropy weights w0, w1...', file=sys.stderr)
+    print('Calculating Binary Cross Entropy weights w0 and w1...', file=sys.stderr)
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
 
     num_samples = len(dataset)
@@ -89,9 +88,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
     embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors).to(torch.float32), requires_grad=False)
 
-
     model = TGN(args)
-
     model.train()
 
     for p in model.parameters():
@@ -105,6 +102,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     print('use device: %s' % device, file=sys.stderr)
 
     model = model.to(device)
+    embedding.to(device)
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
 
@@ -158,11 +156,12 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    #words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
-    with open('vocab.txt', 'r') as f:
-        words = f.readlines()
-    print(len(words))
-    word_vectors = np.zeros([len(words)+2, 50])
+    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+
+    # with open('vocab.txt', 'r') as f:
+    #    words = f.readlines()
+    # print(len(words))
+    # word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
     train(vocab, word_vectors, args)

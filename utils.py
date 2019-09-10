@@ -10,21 +10,16 @@ import math
 import csv
 from matplotlib import pyplot as plt
 from skimage import transform
+import torch.nn as nn
 
 
-class ModelEmbeddings:
-    def __init__(self, word_vectors_np, padding_idx=0):
-        self.embedding = Embedding(len(word_vectors_np), embedding_dim=300, padding_idx=padding_idx)
-        Embedding.weight = torch.from_numpy(word_vectors_np)
-
-
-def pad_textual_data(sents, pad_token):
+def pad_textual_data(sents: List[List[str]], pad_token):
     """ Pad list of sentences according to the longest sentence in the batch.
-    :param sents (list[list[str]]): list of sentences, where each sentence
+    :param sents: list of sentences, where each sentence
                                     is represented as a list of words
-    :param pad_token (str): padding token
+    :param pad_token: padding token
 
-    :returns sents_padded (list[list[str]]): list of sentences where sentences shorter
+    :returns sents_padded: list of sentences where sentences shorter
     than the max length sentence are padded out with the pad_token, such that
     each sentences in the batch now has equal length.
     """
@@ -74,26 +69,22 @@ def load_word_vectors(glove_file_path):
     model = KeyedVectors.load_word2vec_format('glove.word2vec.txt')
     words = list(model.vocab.keys())
     dim = len(model[words[0]])
-    print('dimension of word vectors', dim)
     word_vectors = [np.zeros([2, dim])] + [model[word].reshape(1, -1) for word in words]
     word_vectors = np.concatenate(word_vectors, axis=0)
-    print('shape of word vectors', word_vectors.shape)
-    print('Word vectors were loaded successfully...')
 
     return words, word_vectors
 
 
 def process_visual_data_tacos(output_frame_size: Tuple):
-    visual_data_path = 'data/visual_data/TACoS'
-    processed_visual_data_path = 'data/processed_visual_data/TACoS'
+    visual_data_path = 'data/visual_data/TACoS/videos'
+    processed_visual_data_path = 'data/processed_visual_data/TACoS/videos'
 
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
-    video_files = os.listdir(visual_data_path)
+    #video_files = os.listdir(visual_data_path)
+    video_files = ['s13-d21.avi', 's13-d28.avi', 's13-d31.avi', 's13-d40.avi']
     if '.DS_Store' in video_files: video_files.remove('.DS_Store')
-
-    f = open('fps.txt', 'w')
 
     for video_file in video_files:
         print('processing %s...' % video_file)
@@ -120,10 +111,7 @@ def process_visual_data_tacos(output_frame_size: Tuple):
 
         frames = np.concatenate(frames)
         output_file = os.path.join(processed_visual_data_path, video_file.replace('.avi', '.npy'))
-        f.write(video_file.replace('.avi', '') + '\t' + str(current_frame))
         np.save(output_file, frames)
-
-    f.close()
 
 
 def process_visual_data_activitynet():
@@ -135,7 +123,7 @@ def process_visual_data_didemo():
 
 
 def find_K():
-    textual_data_path = 'data/textual_data'
+    textual_data_path = 'data/textual_data/TACoS'
 
     lengths = []
     for file in os.listdir(textual_data_path):
@@ -146,6 +134,7 @@ def find_K():
                 lengths.append(end_frame - start_frame)
 
     print(np.mean(lengths))
+    print(np.sort(lengths))
     plt.hist(lengths)
     plt.show()
 
@@ -174,5 +163,5 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
 
 if __name__ == '__main__':
-    process_visual_data_tacos(output_frame_size=(224, 224))
-    pass
+    process_visual_data_tacos((224, 224))
+

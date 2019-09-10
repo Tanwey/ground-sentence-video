@@ -10,6 +10,7 @@ from math import ceil
 from typing import List
 from collections import namedtuple
 from utils import pad_labels
+import sys
 
 np.random.seed(42)
 
@@ -33,7 +34,6 @@ class TACoS(torch.utils.data.Dataset):
         self.textual_data_path = textual_data_path
         self.visual_data_path = visual_data_path
         self.threshold = threshold
-        print('threshold is', self.threshold)
         self.transforms = transforms.Compose([transforms.ToTensor(),
                                               transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                    std=[0.229, 0.224, 0.225])])
@@ -47,6 +47,7 @@ class TACoS(torch.utils.data.Dataset):
         self.num_frames = dict()
 
         # loading the textual data
+        print('Loading the textual data...', file=sys.stderr)
         for file in files:
             with open(os.path.join(textual_data_path, file)) as tsvfile:
                 video_id = file.replace('.aligned.tsv', '')
@@ -64,10 +65,10 @@ class TACoS(torch.utils.data.Dataset):
         val_size = int(val_ratio * len(index_array))
         test_size = int(test_ratio * len(index_array))
 
-        print('val size is %d' % val_size)
-        print('test size is %d' % test_size)
+        print('val size is %d' % val_size, file=sys.stderr)
+        print('test size is %d' % test_size, file=sys.stderr)
 
-        self.val_indices = index_array[:val_size],
+        self.val_indices = index_array[:val_size]
         self.test_indices = index_array[val_size:val_size+test_size]
         self.train_indices = index_array[val_size+test_size:]
 
@@ -77,6 +78,7 @@ class TACoS(torch.utils.data.Dataset):
         if '.DS_Store' in files: files.remove('.DS_Store')
 
         # loading and preprocessing visual data
+        print('Loading the visual data...', file=sys.stderr)
         for file in files:
             path = os.path.join(visual_data_path, file)
             video = np.load(path)
@@ -145,4 +147,3 @@ class TACoS(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data = TACoS(textual_data_path='data/textual_data/TACoS', visual_data_path='data/processed_visual_data/TACoS',
                  num_time_scales=10, delta=4, threshold=1.)
-

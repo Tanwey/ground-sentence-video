@@ -14,14 +14,14 @@ class VGG16(nn.Module):
         for param in self.model.parameters():
             param.requires_grad = False
 
-    def forward(self, input: torch.Tensor):
+    def forward(self, x: torch.Tensor):
         """
-        :param input: A batch of images with shape (K, 224, 224, 3)
+        :param x: A batch of images with shape (K, 224, 224, 3)
         :return: extracted features with shape (K, 4096)
         """
         self.model.eval()
-        return torch.zeros([input.shape[0], 4096])
-        # return self.model(input)
+        #return self.model(x)
+        return torch.zeros([x.shape[0], 4096])
 
 
 class InceptionV4(nn.Module):
@@ -38,7 +38,6 @@ class C3D(nn.Module):
 
     def forward(self, input):
         pass
-
 
 
 if __name__ == '__main__':
