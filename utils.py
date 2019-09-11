@@ -1,3 +1,15 @@
+"""
+Some utility functions
+
+Usage:
+    utils.py process-visual-data-tacos --visual-data-path=<dir> --processed-visual-data-path=<dir> --output-frame-size=<int>
+    utils.py find_K
+
+"""
+
+
+
+
 import torch
 from torch.nn import Embedding
 from gensim.models import KeyedVectors
@@ -10,6 +22,7 @@ import math
 import csv
 from matplotlib import pyplot as plt
 from skimage import transform
+from docopt import docopt
 import torch.nn as nn
 
 
@@ -75,9 +88,7 @@ def load_word_vectors(glove_file_path):
     return words, word_vectors
 
 
-def process_visual_data_tacos(output_frame_size: Tuple):
-    visual_data_path = 'data/visual_data/TACoS/videos'
-    processed_visual_data_path = 'data/processed_visual_data/TACoS/videos'
+def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path: str, output_frame_size: Tuple):
 
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
@@ -163,5 +174,12 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
 
 if __name__ == '__main__':
-    process_visual_data_tacos((224, 224))
+    args = docopt(__doc__)
+    if args['process-visual-data-tacos']:
+        visual_data_path = args['--visual-data-path']
+        processed_visual_data_path = args['--processed-visual-data-path']
+        output_frame_size = int(args['--output-frame-size'])
+        process_visual_data_tacos(visual_data_path, processed_visual_data_path (output_frame_size, output_frame_size))
+
+
 

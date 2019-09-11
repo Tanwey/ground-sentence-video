@@ -23,7 +23,7 @@ class TACoS(torch.utils.data.Dataset):
                  threshold: float, val_ratio=0.25, test_ratio=0.25):
         """
         :param textual_data_path: directory containing the annotations
-        :param visual_data_path: directory containing the videos
+        :param visual_data_path: directory containing the processed videos
         :param num_time_scales: K in the paper
         :param delta: ẟ in the paper
         :param threshold: θ in the paper
@@ -89,10 +89,9 @@ class TACoS(torch.utils.data.Dataset):
 
     def _generate_labels(self, visual_data: List[torch.Tensor], textual_data: List[Annotation]):
         """
-        :param T: number of the frames of video
-        :param start_frame: The corresponding start frame for the annotation
-        :param end_frame:  The corresponding ending frame for the annotation
-        :return: label with shape (T, K) where T is the length of the visual_input
+        :param visual_data:
+        :param textual_data:
+        :return:
         """
         fps = 30
         sample_rate = fps * 5
@@ -112,6 +111,10 @@ class TACoS(torch.utils.data.Dataset):
         return pad_labels(labels)  # torch.Tensor with shape (num_labels, T, K)
 
     def __getitem__(self, item):
+        """
+        :param item:
+        :return:
+        """
         s = self.textual_data[item]
         video_id, start_frame, end_frame = s.video_id, s.start_frame, s.end_frame
         visual_data = self.visual_data[video_id]  # torch.Tensor
@@ -119,6 +122,11 @@ class TACoS(torch.utils.data.Dataset):
         return visual_data, s, label
 
     def data_iter(self, batch_size: int, set: str):
+        """
+        :param batch_size:
+        :param set:
+        :return:
+        """
         index_array = None
         if set == 'train':
             index_array = self.train_indices
