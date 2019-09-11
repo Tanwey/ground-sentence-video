@@ -49,7 +49,6 @@ class TGN(nn.Module):
         :return: grounding scores with shape (n_batch, T, K)
         """
         lengths_v = [v.shape[0] for v in visual_input]
-        print([v.shape for v in visual_input])
 
         mask = self._generate_videos_mask(lengths_v)
 

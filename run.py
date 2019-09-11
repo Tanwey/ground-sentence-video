@@ -162,11 +162,11 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
             train_time = time()
             #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
-        if iteration % valid_niter == 0:
-            print('\tBegin Validation...')
-            loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
-            print('\t\tloss validation %f' % loss_val.item())
-            #writer.add_scalar('Loss/val', loss_val)
+        # if iteration % valid_niter == 0:
+        #     print('\tBegin Validation...')
+        #     loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
+        #     print('\t\tloss validation %f' % loss_val.item())
+        #     #writer.add_scalar('Loss/val', loss_val)
 
         #writer.close()
 
