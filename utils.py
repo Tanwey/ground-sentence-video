@@ -179,7 +179,6 @@ if __name__ == '__main__':
         visual_data_path = args['--visual-data-path']
         processed_visual_data_path = args['--processed-visual-data-path']
         output_frame_size = int(args['--output-frame-size'])
-        process_visual_data_tacos(visual_data_path, processed_visual_data_path (output_frame_size, output_frame_size))
-
+        process_visual_data_tacos(visual_data_path, processed_visual_data_path, (output_frame_size, output_frame_size))
 
 
