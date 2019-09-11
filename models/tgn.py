@@ -81,7 +81,6 @@ class TGN(nn.Module):
 
         return mask.to(self.device)
 
-
     @property
     def device(self) -> torch.device:
         """

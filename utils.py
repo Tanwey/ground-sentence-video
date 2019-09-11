@@ -121,7 +121,7 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
                 break
             current_frame += 1
 
-        frames = np.concatenate(frames)
+        frames = np.concatenate(frames).astype(np.float32)
         output_file = os.path.join(processed_visual_data_path, video_file.replace('.avi', '.npy'))
         np.save(output_file, frames)
 
