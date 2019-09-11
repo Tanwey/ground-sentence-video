@@ -64,6 +64,10 @@ def eval(model: TGN, dataset: TACoS, batch_size: int, device, embedding, w0, w1)
     with torch.no_grad():
         for textual_data, visual_data, y in iter(dataset.data_iter(batch_size, 'val')):
             lengths_t = [len(t) for t in textual_data]
+
+            print(textual_data)
+            print(visual_data.shape)
+
             textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
             textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
