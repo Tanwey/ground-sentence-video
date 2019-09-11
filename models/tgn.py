@@ -58,7 +58,7 @@ class TGN(nn.Module):
 
         features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
         lengths_v = sorted(lengths_v, reverse=True)
-        features_v_padded = pad_visual_data(features_v)  # shape (n_batch, T, dim_feature)
+        features_v_padded = pad_visual_data(features_v, self.device)  # shape (n_batch, T, dim_feature)
 
         h_s = self.textual_lstm_encoder(textual_input, lengths_t)  # shape: (n_batch, N, hidden_size_textual)
 
