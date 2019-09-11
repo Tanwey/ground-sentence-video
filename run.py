@@ -67,14 +67,9 @@ def eval(model: TGN, dataset: TACoS, batch_size: int, device, embedding, w0, w1)
             textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
             textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
-            probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)
-            y.to(device)
+            probs, mask = model(textual_data_embed_tensor, visual_data, lengths_t)
 
-            print('w0 and w1 device', w0.device, w1.device)
-            print('y device', y.device)
-            print('probs device', probs.device)
-            print('mask device', mask.device)
-
+            y = y.to(device)
             loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
 
     if was_training:
