@@ -23,6 +23,7 @@ import csv
 from matplotlib import pyplot as plt
 from skimage import transform
 from docopt import docopt
+import sys
 import torch.nn as nn
 
 
@@ -74,7 +75,7 @@ def pad_labels(labels: List[torch.Tensor]):
 
 
 def load_word_vectors(glove_file_path):
-    print('Loading Glove word vectors...')
+    print('Loading Glove word vectors from {}...'.format(glove_file_path), file=sys.stderr)
 
     if not os.path.exists('glove.word2vec.txt'):
         glove2word2vec(glove_file_path, 'glove.word2vec.txt')

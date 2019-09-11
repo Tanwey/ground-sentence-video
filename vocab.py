@@ -6,10 +6,11 @@ import sys
 
 class Vocab(object):
     """ Vocabulary
-    Constructing the vocabulary with the words of Glove 300d
+    Constructing the vocabulary with the words of Glove
     """
     def __init__(self, words):
-        """ Init VocabEntry Instance.
+        """
+        Init VocabEntry Instance.
         :param words: list of words
         """
         print('Creating vocabulary...', file=sys.stderr)
@@ -62,9 +63,9 @@ class Vocab(object):
         return self.id2word[wid]
 
     def add(self, word):
-        """ Add word to VocabEntry, if it is previously unseen.
-        @param word (str): word to add to VocabEntry
-        @return index (int): index that the word has been assigned
+        """
+        Add word to VocabEntry, if it is previously unseen.
+        :param word: word to add to VocabEntry
         """
         if word not in self:
             wid = self.word2id[word] = len(self)
@@ -75,8 +76,8 @@ class Vocab(object):
 
     def words2indices(self, sents):
         """ Convert list of words or list of sentences of words into list or list of list of indices.
-        :param sents: (list[str] or list[list[str]]): sentence(s) in words
-        :return word_ids (list[int] or list[list[int]]): sentence(s) in indices
+        :param sents: (list[str] or list[list[str]] sentence(s) in words
+        :return word_ids: (list[int] or list[list[int]]) sentence(s) in indices
         """
         if type(sents[0]) == list:
             return [[self[w] for w in s] for s in sents]
