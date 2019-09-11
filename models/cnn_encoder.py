@@ -20,8 +20,8 @@ class VGG16(nn.Module):
         :return: extracted features with shape (K, 4096)
         """
         self.model.eval()
-        #return self.model(x)
-        return torch.zeros([x.shape[0], 4096])
+        return self.model(x)
+        #return torch.zeros([x.shape[0], 4096])
 
 
 class InceptionV4(nn.Module):
