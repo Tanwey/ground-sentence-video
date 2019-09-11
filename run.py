@@ -128,6 +128,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         optimizer.zero_grad()
         probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
+        y = y.to(device)
         loss = -torch.sum((y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))*mask)
         cum_samples += batch_size
         reported_samples += batch_size
