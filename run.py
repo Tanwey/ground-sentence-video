@@ -39,7 +39,7 @@ from time import time
 from torch.nn.init import xavier_normal_, normal_
 
 
-def find_bce_weights(dataset: TACoS, num_time_scales: int):
+def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
     print('Calculating Binary Cross Entropy weights w0 and w1...', file=sys.stderr)
     w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
 
@@ -52,8 +52,7 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int):
         time_steps += T
         tmp = torch.sum(label, dim=0).to(torch.float32)
         w0 += T - tmp
-
-    w0 = w0 / time_steps
+    w0 = w0.to(device)
 
     return w0, 1-w0
 
@@ -112,7 +111,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     #writer = SummaryWriter()
     #writer.add_graph(model, )
 
-    w0, w1 = find_bce_weights(dataset, num_time_scales)  # Tensors with shape (K,)
+    w0, w1 = find_bce_weights(dataset, num_time_scales, device)  # Tensors with shape (K,)
 
     cum_samples = reported_samples = 0
     train_time = begin_time = time()
@@ -129,7 +128,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
         optimizer.zero_grad()
         probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
         y = y.to(device)
-        loss = -torch.sum((y * torch.log(probs) + (1 - y) * torch.log(1 - probs)) * mask)
+        loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
         cum_samples += batch_size
         reported_samples += batch_size
 
