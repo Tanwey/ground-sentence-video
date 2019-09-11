@@ -19,7 +19,7 @@ Options:
     --num-time-scales=<int>                 Parameter K in the paper
     --delta=<int>                           Parameter ẟ in the paper
     --threshold=<float>                     Parameter θ in the paper
-    --valid-niter=<int>                     perform validation after how many iterations [default: 20]
+    --valid-niter=<int>                     perform validation after how many iterations [default: 50]
     --word-embed-size=<int>                 size of the glove word vectors [default: 50]
 """
 
@@ -58,19 +58,23 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
     return w0, 1-w0
 
 
-def eval(model: TGN, valloader: DataLoader, batch_size: int):
+def eval(model: TGN, dataset: TACoS, batch_size: int, device, embedding, w0, w1):
     was_training = model.training
 
-    # with torch.no_grad():
-    #     for batch_idx, (visual_data, textual_data, y) in enumerate(valloader):
-    #         probs = model(visual_data, textual_data)
-    #         loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
-    #         loss.item()
-    #
-    # if was_training:
-    #     model.train()
-    #
-    # return loss
+    with torch.no_grad():
+        for textual_data, visual_data, y in iter(dataset.data_iter(batch_size, 'val')):
+            lengths_t = [len(t) for t in textual_data]
+            textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
+            textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
+
+            probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)
+            y.to(device)
+            loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
+
+    if was_training:
+        model.train()
+
+    return loss
 
 
 def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
@@ -114,7 +118,9 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
     w0, w1 = find_bce_weights(dataset, num_time_scales, device)  # Tensors with shape (K,)
 
-    cum_samples = reported_samples = 0
+    cum_samples = report_samples = 0.
+    report_loss = cum_loss = 0.
+
     train_time = begin_time = time()
     print('Begin training...')
 
@@ -127,28 +133,38 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
         textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
         optimizer.zero_grad()
-        probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)  # shape: (n_batch, T, K)
-        y = y.to(device)
-        loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
-        cum_samples += batch_size
-        reported_samples += batch_size
 
-        loss.backward()
+        # Computing probs and mask with shape (n_batch, T, K)
+        probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)
+
+        y = y.to(device)
+        batch_loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
+        batch_loss_val = batch_loss.item()
+
+        cum_samples += batch_size
+        report_samples += batch_size
+        report_loss += batch_loss_val
+        cum_loss += batch_loss_val
+
+        batch_loss.backward()
         optimizer.step()
 
         if iteration % log_every == 0:
-            print('Iteration number %d, loss train: %f, '
+            print('Iteration number %d, loss: %f, '
                   'speed %.2f samples/sec, time elapsed %.2f sec' % (iteration,
-                                                                     loss.item(),
-                                                                     reported_samples / (time() - train_time),
+                                                                     report_loss / report_samples,
+                                                                     report_samples / (time() - train_time),
                                                                      time() - begin_time))
 
-            reported_samples = 0
+            report_samples = 0
+            report_loss = 0.
             train_time = time()
             #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
-        # if iteration % valid_niter == 0:
-        #     loss_val = eval(dataset, batch_size=batch_size)
+        if iteration % valid_niter == 0:
+            print('\tBegin Validation...')
+            loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
+            print('\t\tloss validation %f' % loss_val.item())
             #writer.add_scalar('Loss/val', loss_val)
 
         #writer.close()
