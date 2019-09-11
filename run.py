@@ -69,7 +69,7 @@ def eval(model: TGN, dataset: TACoS, batch_size: int, device, embedding, w0, w1)
 
             probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)
             y.to(device)
-            loss = -torch.sum(y * w0 * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs))
+            loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
 
     if was_training:
         model.train()
