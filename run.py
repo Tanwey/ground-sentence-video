@@ -164,7 +164,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         if iteration % valid_niter == 0:
             print('\tBegin Validation...')
-            loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
+            loss_val = eval(model, dataset, 8, device, embedding, w0, w1)
             print('\t\tloss validation %f' % loss_val.item())
             #writer.add_scalar('Loss/val', loss_val)
 
