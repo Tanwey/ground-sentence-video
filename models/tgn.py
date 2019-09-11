@@ -53,7 +53,7 @@ class TGN(nn.Module):
 
         visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
 
-        features_v_cat = self.cnn_encoder(visual_input_cat)  # shape: (n_batch, T, feature_size)
+        features_v_cat = self.cnn_encoder(visual_input_cat.to(self.device))  # shape: (n_batch, T, feature_size)
         features_v = torch.split(features_v_cat, lengths_v)
 
         features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
