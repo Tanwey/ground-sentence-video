@@ -82,6 +82,7 @@ class TACoS(torch.utils.data.Dataset):
         for file in files:
             path = os.path.join(visual_data_path, file)
             video = np.load(path)
+            print('dtype is', video.dtype)
             self.visual_data[file.replace('.npy', '')] = self._transform(video)
 
     def __len__(self):
@@ -149,6 +150,8 @@ class TACoS(torch.utils.data.Dataset):
         :param video: np.ndarray with shape (T, 224, 224, 3)
         :return torch.Tensor with shape (T, 3, 224, 224)
         """
+        tmp = transforms.ToTensor()
+        print(tmp(video).dtype)
         return torch.cat([self.transforms(img).unsqueeze(dim=0) for img in video], dim=0)
 
 
