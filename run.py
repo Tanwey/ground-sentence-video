@@ -52,7 +52,8 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
         time_steps += T
         tmp = torch.sum(label, dim=0).to(torch.float32)
         w0 += T - tmp
-    w0 = w0.to(device)
+
+    w0 = (w0 / time_steps).to(device)
 
     return w0, 1-w0
 
