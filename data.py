@@ -34,9 +34,10 @@ class TACoS(torch.utils.data.Dataset):
         self.textual_data_path = textual_data_path
         self.visual_data_path = visual_data_path
         self.threshold = threshold
-        self.transforms = transforms.Compose([transforms.ToTensor(),
-                                              transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                   std=[0.229, 0.224, 0.225])])
+        #self.transforms = transforms.Compose([transforms.ToTensor(),
+        #                                      transforms.Normalize(mean=[0.485, 0.456, 0.406],
+        #                                                           std=[0.229, 0.224, 0.225])])
+        self.transform = transforms.ToTensor()
         #files = os.listdir(textual_data_path)
         files = ['s13-d21.aligned.tsv', 's13-d28.aligned.tsv', 's13-d31.aligned.tsv', 's13-d40.aligned.tsv']
         if '.DS_Store' in files: files.remove('.DS_Store')
@@ -82,7 +83,6 @@ class TACoS(torch.utils.data.Dataset):
         for file in files:
             path = os.path.join(visual_data_path, file)
             video = np.load(path)
-            print('dtype is', video.dtype)
             self.visual_data[file.replace('.npy', '')] = self._transform(video)
 
     def __len__(self):
@@ -150,9 +150,9 @@ class TACoS(torch.utils.data.Dataset):
         :param video: np.ndarray with shape (T, 224, 224, 3)
         :return torch.Tensor with shape (T, 3, 224, 224)
         """
-        tmp = transforms.ToTensor()
-        print(tmp(video).dtype)
-        return torch.cat([self.transforms(img).unsqueeze(dim=0) for img in video], dim=0)
+        x = torch.cat([self.transform(img).unsqueeze(dim=0) for img in video], dim=0)
+        print(x.dtype)
+        return x
 
 
 if __name__ == '__main__':
