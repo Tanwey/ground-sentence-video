@@ -37,6 +37,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from time import time
 from torch.nn.init import xavier_normal_, normal_
+from torch.utils.tensorboard import SummaryWriter
 
 
 def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
@@ -114,8 +115,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path,
                     num_time_scales=num_time_scales, delta=delta, threshold=threshold)
 
-    #writer = SummaryWriter()
-    #writer.add_graph(model, )
+    writer = SummaryWriter()
 
     w0, w1 = find_bce_weights(dataset, num_time_scales, device)  # Tensors with shape (K,)
 
@@ -157,29 +157,29 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
                                                                      report_samples / (time() - train_time),
                                                                      time() - begin_time))
 
+            writer.add_scalar('Loss/train', report_loss/report_samples, iteration)
             report_samples = 0
             report_loss = 0.
             train_time = time()
-            #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
         if iteration % valid_niter == 0:
-            print('\tBegin Validation...')
+            print('Begin Validation...')
             loss_val = eval(model, dataset, 8, device, embedding, w0, w1)
-            print('\t\tloss validation %f' % loss_val.item())
-            #writer.add_scalar('Loss/val', loss_val)
+            print('loss validation %f' % loss_val.item())
+            writer.add_scalar('Loss/val', loss_val, iteration)
 
-        #writer.close()
+    writer.close()
 
 
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    # words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
-    #with open('vocab.txt', 'r') as f:
-    #   words = f.readlines()
-    #print(len(words))
-    #word_vectors = np.zeros([len(words)+2, 50])
+    with open('vocab.txt', 'r') as f:
+      words = f.readlines()
+    print(len(words))
+    word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
     train(vocab, word_vectors, args)
