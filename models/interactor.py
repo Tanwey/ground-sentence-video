@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import LSTM, LSTMCell, Linear, Parameter
 
+
 class Interactor(nn.Module):
     def __init__(self, hidden_size_textual: int, hidden_size_visual: int,
                  hidden_size_ilstm: int):
@@ -35,8 +36,8 @@ class Interactor(nn.Module):
         n_batch, T, N = h_v.shape[0], h_v.shape[1], h_s.shape[1]
 
         # h_r_{t-1} in the paper
-        h_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm])
-        c_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm])
+        h_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm], device=self.device)
+        c_r_prev = torch.zeros([n_batch, self.hidden_size_ilstm], device=self.device)
 
         outputs = []
 
@@ -63,6 +64,9 @@ class Interactor(nn.Module):
 
         return torch.cat(outputs, dim=1)
 
-
-
-
+    @property
+    def device(self) -> torch.device:
+        """
+        Determine which device to place the Tensors upon, CPU or GPU.
+        """
+        return self.projection_S.weight.device
