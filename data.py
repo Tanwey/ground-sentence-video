@@ -143,6 +143,7 @@ class TACoS(torch.utils.data.Dataset):
             labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
 
             textual_data = [s.sent for s in textual_data]
+
             yield textual_data, visual_data, labels
 
     def _transform(self, video):

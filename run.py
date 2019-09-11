@@ -67,7 +67,7 @@ def eval(model: TGN, dataset: TACoS, batch_size: int, device, embedding, w0, w1)
             textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
             textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
-            probs, mask = model(textual_data_embed_tensor, visual_data, lengths_t)
+            probs, mask = model(visual_data, textual_data_embed_tensor, lengths_t)
 
             y = y.to(device)
             loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
@@ -162,11 +162,11 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
             train_time = time()
             #writer.add_scalar('Loss/train', loss_train.item(), iteration)
 
-        # if iteration % valid_niter == 0:
-        #     print('\tBegin Validation...')
-        #     loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
-        #     print('\t\tloss validation %f' % loss_val.item())
-        #     #writer.add_scalar('Loss/val', loss_val)
+        if iteration % valid_niter == 0:
+            print('\tBegin Validation...')
+            loss_val = eval(model, dataset, batch_size, device, embedding, w0, w1)
+            print('\t\tloss validation %f' % loss_val.item())
+            #writer.add_scalar('Loss/val', loss_val)
 
         #writer.close()
 
@@ -174,12 +174,12 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    #words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
-    # with open('vocab.txt', 'r') as f:
-    #    words = f.readlines()
-    # print(len(words))
-    # word_vectors = np.zeros([len(words)+2, 50])
+    with open('vocab.txt', 'r') as f:
+       words = f.readlines()
+    print(len(words))
+    word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
     train(vocab, word_vectors, args)
