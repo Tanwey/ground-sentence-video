@@ -40,7 +40,7 @@ class TGN(nn.Module):
 
     def forward(self, visual_input, textual_input: torch.Tensor, lengths_t: List[int]):
         """
-        :param visual_input: a tensor containing a batch of input images (n_batch, T, 224, 224, 3)
+        :param visual_input:
         :param textual_input: a tensor containing a batch of embedded words
         with shape (n_batch, N, sentence_length, word_embed_size: 300)
         :param lengths_t:
@@ -49,6 +49,8 @@ class TGN(nn.Module):
         :return: grounding scores with shape (n_batch, T, K)
         """
         lengths_v = [v.shape[0] for v in visual_input]
+        print([v.shape for v in visual_input])
+
         mask = self._generate_videos_mask(lengths_v)
 
         visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
