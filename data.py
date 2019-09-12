@@ -38,8 +38,8 @@ class TACoS(torch.utils.data.Dataset):
                                              transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                   std=[0.229, 0.224, 0.225])])
 
-        #files = os.listdir(textual_data_path)
-        files = ['s13-d21.aligned.tsv', 's13-d28.aligned.tsv', 's13-d31.aligned.tsv', 's13-d40.aligned.tsv']
+        files = os.listdir(textual_data_path)
+        #files = ['s13-d21.aligned.tsv', 's13-d28.aligned.tsv', 's13-d31.aligned.tsv', 's13-d40.aligned.tsv']
         if '.DS_Store' in files: files.remove('.DS_Store')
 
         self.textual_data = []
@@ -73,17 +73,19 @@ class TACoS(torch.utils.data.Dataset):
         self.test_indices = index_array[val_size:val_size+test_size]
         self.train_indices = index_array[val_size+test_size:]
 
+        print('train size is %d' % len(self.train_indices), file=sys.stderr)
+
         # loading all of the preprocessed videos as numpy nd-arrays
-        self.visual_data = dict()
-        files = os.listdir(visual_data_path)
-        if '.DS_Store' in files: files.remove('.DS_Store')
+        # self.visual_data = dict()
+        # files = os.listdir(visual_data_path)
+        # if '.DS_Store' in files: files.remove('.DS_Store')
 
         # loading and preprocessing visual data
-        print('Loading the visual data...', file=sys.stderr)
-        for file in files:
-            path = os.path.join(visual_data_path, file)
-            video = np.load(path)
-            self.visual_data[file.replace('.npy', '')] = self._transform(video)
+        #print('Loading the visual data...', file=sys.stderr)
+        #for file in files:
+        #    path = os.path.join(visual_data_path, file)
+        #    video = np.load(path)
+        #    self.visual_data[file.replace('.npy', '')] = self._transform(video)
 
     def __len__(self):
         return len(self.textual_data)
@@ -117,10 +119,27 @@ class TACoS(torch.utils.data.Dataset):
         :return:
         """
         s = self.textual_data[item]
-        video_id, start_frame, end_frame = s.video_id, s.start_frame, s.end_frame
-        visual_data = self.visual_data[video_id]  # torch.Tensor
+        file = s.video_id + '.npy'
+        path = os.path.join(self.visual_data_path, file)
+        video = np.load(path)
+        visual_data = self._transform(video)
         label = self._generate_labels([visual_data], [s])[0]
         return visual_data, s, label
+
+    def _load_visual_data(self, textual_data: List[Annotation]):
+        """
+        :param textual_data:
+        :return:
+        """
+        visual_data = []
+        for t in textual_data:
+            video_id = t.video_id
+            file = video_id + '.npy'
+            path = os.path.join(self.visual_data_path, file)
+            video = np.load(path)
+            visual_data.append(self._transform(video))
+
+        return visual_data
 
     def data_iter(self, batch_size: int, set: str):
         """
@@ -139,7 +158,9 @@ class TACoS(torch.utils.data.Dataset):
             indices = index_array[i * batch_size: (i + 1) * batch_size]
             textual_data = [self.textual_data[idx] for idx in indices]
             textual_data = sorted(textual_data, key=lambda s: len(s.sent), reverse=True)
-            visual_data = [self.visual_data[s.video_id] for s in textual_data]
+
+            #visual_data = [self.visual_data[s.video_id] for s in textual_data]
+            visual_data = self._load_visual_data(textual_data)
 
             if set == 'train':
                 labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)

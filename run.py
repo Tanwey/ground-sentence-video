@@ -14,7 +14,7 @@ Options:
     --hidden-size-visual-lstm=<int>         hidden size of visual lstm [default: 512]
     --hidden-size-ilstm=<int>               hidden size of ilstm [default: 512]
     --log-every=<int>                       log every [default: 10]
-    --max-iter=<int>                        maximum number of iterations of training [default: 200]
+    --max-iter=<int>                        maximum number of iterations of training [default: 1000]
     --lr=<float>                            learning rate [default: 0.001]
     --patience=<int>                        waiting for how many iterations to decay learning rate [default: 5]
     --num-time-scales=<int>                 parameter K in the paper
@@ -72,7 +72,7 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     for i in range(n_batch):
         val = np.max([compute_overlap(start_time_step.item(), end_time_step.item(), start_frames[i], end_frames[i])
                         for start_time_step, end_time_step in zip(start_time_steps, end_time_steps)])
-        score += int(val > threshold)
+        score += int(val/fps > threshold)
 
     return score
 
@@ -183,6 +183,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         # getting visual_data, textual_data, labels each one as a list
         textual_data, visual_data, y = next(dataset.data_iter(batch_size, 'train'))
+
         lengths_t = [len(t) for t in textual_data]
         textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
         textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
@@ -263,12 +264,11 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    #words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
-    with open('vocab.txt', 'r') as f:
-      words = f.readlines()
-    print(len(words))
-    word_vectors = np.zeros([len(words)+2, 50])
+    # with open('vocab.txt', 'r') as f:
+    #     words = f.readlines()
+    # word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
     train(vocab, word_vectors, args)
