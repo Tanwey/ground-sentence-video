@@ -94,8 +94,8 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
-    #video_files = os.listdir(visual_data_path)
-    video_files = ['s13-d21.avi', 's13-d28.avi', 's13-d31.avi', 's13-d40.avi']
+    video_files = os.listdir(visual_data_path)
+    #video_files = ['s13-d21.avi', 's13-d28.avi', 's13-d31.avi', 's13-d40.avi']
     if '.DS_Store' in video_files: video_files.remove('.DS_Store')
 
     for video_file in video_files:
