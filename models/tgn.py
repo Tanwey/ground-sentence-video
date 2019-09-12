@@ -12,17 +12,23 @@ import sys
 
 
 class TGN(nn.Module):
-    def __init__(self, args: Dict):
+    def __init__(self, word_embed_size: int, hidden_size_textual: int, hidden_size_visual: int,
+                 hidden_size_ilstm: int, num_time_scales: int):
         """
         :param args: Dict of experimental settings
         """
         super(TGN, self).__init__()
 
-        word_embed_size = int(args['--word-embed-size'])
-        hidden_size_textual = int(args['--hidden-size-textual-lstm'])
-        hidden_size_visual = int(args['--hidden-size-visual-lstm'])
-        hidden_size_ilstm = int(args['--hidden-size-ilstm'])
-        self.num_time_scales = int(args['--num-time-scales'])
+        #hidden_size_textual = int(args['--hidden-size-textual-lstm'])
+        #hidden_size_visual = int(args['--hidden-size-visual-lstm'])
+        #hidden_size_ilstm = int(args['--hidden-size-ilstm'])
+        #self.num_time_scales = int(args['--num-time-scales'])
+        self.word_embed_size = word_embed_size
+        self.hidden_size_visual = hidden_size_visual
+        self.hidden_size_textual = hidden_size_textual
+        self.hidden_size_ilstm = hidden_size_ilstm
+        self.num_time_scales = num_time_scales
+
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
         self.cnn_encoder = VGG16()
@@ -96,21 +102,21 @@ class TGN(nn.Module):
         """
         params = torch.load(model_path, map_location=lambda storage, loc: storage)
         args = params['args']
-        model = TGN()
+        model = TGN(**args)
         model.load_state_dict(params['state_dict'])
 
         return model
 
     def save(self, path: str):
-        """ Save the odel to a file.
-        @param path (str): path to the model
+        """ Save the model to a file.
+        :param path: path to the model
         """
         print('save model parameters to [%s]' % path, file=sys.stderr)
 
         params = {
-            'args': dict(embed_size=self.model_embeddings.embed_size, hidden_size=self.hidden_size,
-                         dropout_rate=self.dropout_rate),
-            'vocab': self.vocab,
+            'args': dict(word_embed_size=self.word_embed_size, hidden_size_textual=self.hidden_size_visual,
+                         hidden_size_visual=self.hidden_size_visual, hidden_size_ilstm=self.hidden_size_ilstm,
+                         num_time_scales=self.num_time_scales),
             'state_dict': self.state_dict()
         }
 

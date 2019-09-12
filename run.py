@@ -24,7 +24,7 @@ Options:
     --model-save-path=<file>                model save path [default: model.bin]
     --valid-niter=<int>                     perform validation after how many iterations [default: 50]
     --word-embed-size=<int>                 size of the glove word vectors [default: 50]
-    --top-n-eval=<int>                      Parameter N in R@N, IOU=θ evaluation metric
+    --top-n-eval=<int>                      Parameter N in R@N, IOU=θ evaluation metric [default: 1]
 """
 
 import torch
@@ -52,6 +52,9 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     :param end_frames: ground truth end frames with len (n_batch,)
     :returns score: validation score
     """
+    fps = 30
+    sample_rate = fps * 5
+
     n_batch, T, K = y_pred.shape
 
     delta = int(args['--delta'])
@@ -60,9 +63,10 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     # computing indices which is a Tensor with shape (n_batch, top_n_eval)
     _, indices = torch.topk(y_pred.view(n_batch, -1), k=int(args['--top-n-eval']), dim=-1)
 
-    end_time_steps = indices // K  # tensor with shape (n_batch, top_n_eval)
+    end_time_steps = (indices // K) * sample_rate  # tensor with shape (n_batch, top_n_eval)
+
     scale_nums = indices % K
-    start_time_steps = end_time_steps - (scale_nums * delta)
+    start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
 
     score = 0
     for i in range(n_batch):
@@ -95,20 +99,21 @@ def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
 def eval(model: TGN, dataset: TACoS, device, embedding: nn.Embedding, args: Dict):
     was_training = model.training
 
-    batch_size = args['--batch-size']
+    batch_size = int(args['--batch-size'])
 
     with torch.no_grad():
         cum_score = cum_samples = 0
 
-        for textual_data, visual_data, y in iter(dataset.data_iter(batch_size, 'val')):
+        for textual_data, visual_data in iter(dataset.data_iter(batch_size, 'val')):
             cum_samples += len(textual_data)
             lengths_t = [len(t) for t in textual_data]
-            textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
+            sents = [t.sent for t in textual_data]
+            textual_data_tensor = vocab.to_input_tensor(sents, device=device)  # tensor with shape (n_batch, N)
             textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
 
             probs, mask = model(visual_data, textual_data_embed_tensor, lengths_t)  # Tensors with shape (n_batch, T, K)
 
-            start_frames = [t.start_fram for t in textual_data]
+            start_frames = [t.start_frame for t in textual_data]
             end_frames = [t.end_frame for t in textual_data]
 
             score = top_n_iou(probs*mask, start_frames, end_frames, args)
@@ -136,7 +141,11 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
     embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors).to(torch.float32), requires_grad=False)
 
-    model = TGN(args)
+    model = TGN(hidden_size_ilstm=int(args['--hidden-size-ilstm']),
+                hidden_size_textual=int(args['--hidden-size-textual-lstm']),
+                hidden_size_visual=int(args['--hidden-size-visual-lstm']),
+                num_time_scales=num_time_scales, word_embed_size=int(args['--word-embed-size']))
+
     model.train()
 
     for p in model.parameters():
@@ -209,11 +218,11 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
         if iteration % valid_niter == 0:
             print('Begin Validation...')
-            val_score = eval(model=model, dataset=dataset, batch_size=batch_size,
-                             device=device, embedding=embedding, top_n_eval=top_n_eval)
+            val_score = eval(model=model, dataset=dataset, device=device,
+                             embedding=embedding, args=args)
 
-            print('Validation score %f' % val_score.item())
-            writer.add_scalar('Score/val', val_score.item(), iteration)
+            print('Validation score %f' % val_score)
+            writer.add_scalar('Score/val', val_score, iteration)
 
             is_better = len(val_scores) == 0 or val_score > np.max(val_scores)
             if is_better:
@@ -254,12 +263,12 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    #words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
-    # with open('vocab.txt', 'r') as f:
-    #   words = f.readlines()
-    # print(len(words))
-    # word_vectors = np.zeros([len(words)+2, 50])
+    with open('vocab.txt', 'r') as f:
+      words = f.readlines()
+    print(len(words))
+    word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
     train(vocab, word_vectors, args)

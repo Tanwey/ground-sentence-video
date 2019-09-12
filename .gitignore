@@ -7,3 +7,4 @@ __pycache__/
 glove*
 vocab.txt
 runs/
+model.bin*
