@@ -140,11 +140,13 @@ class TACoS(torch.utils.data.Dataset):
             textual_data = [self.textual_data[idx] for idx in indices]
             textual_data = sorted(textual_data, key=lambda s: len(s.sent), reverse=True)
             visual_data = [self.visual_data[s.video_id] for s in textual_data]
-            labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
 
-            textual_data = [s.sent for s in textual_data]
-
-            yield textual_data, visual_data, labels
+            if set == 'train':
+                labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
+                textual_data = [s.sent for s in textual_data]
+                yield textual_data, visual_data, labels
+            else:
+                yield textual_data, visual_data
 
     def _transform(self, video):
         """
