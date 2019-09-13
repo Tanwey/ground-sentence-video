@@ -223,46 +223,46 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
             report_loss = 0.
             train_time = time()
 
-        if iteration % valid_niter == 0:
-            print('Begin Validation...')
-            val_score = eval(model=model, dataset=dataset, device=device,
-                             embedding=embedding, args=args)
+        # if iteration % valid_niter == 0:
+        #     print('Begin Validation...')
+        #     val_score = eval(model=model, dataset=dataset, device=device,
+        #                      embedding=embedding, args=args)
+        #
+        #     print('Validation score %f' % val_score)
+        #     writer.add_scalar('Score/val', val_score, iteration)
+        #
+        #     is_better = len(val_scores) == 0 or val_score > np.max(val_scores)
+        #     if is_better:
+        #         patience = 0
+        #         print('Save currently the best model to [%s]' % model_save_path, file=sys.stderr)
+        #         model.save(model_save_path)
+        #         torch.save(optimizer.state_dict(), model_save_path + '.optim')
+        #     elif patience < int(args['--patience']):
+        #         patience += 1
+        #         print('hit patience %d' % patience, file=sys.stderr)
+        #
+        #         if patience == int(args['--patience']):
+        #             num_trial += 1
+        #             print('hit trial %d' % num_trial, file=sys.stderr)
+        #             if num_trial == int(args['--max-num-trial']):
+        #                 print('early stop!', file=sys.stderr)
+        #                 exit(0)
+        #
+        #             lr = optimizer.param_groups[0]['lr'] * float(args['--lr-decay'])
+        #
+        #             print('load previously best model and decay learning rate to %f' % lr, file=sys.stderr)
+        #             params = torch.load(model_save_path, map_location=lambda storage, loc: storage)
+        #             model.load_state_dict(params['state_dict'])
+        #             model = model.to(device)
+        #
+        #             print('restore parameters of the optimizers', file=sys.stderr)
+        #             optimizer.load_state_dict(torch.load(model_save_path + '.optim'))
+        #
+        #             # set new lr
+        #             for param_group in optimizer.param_groups:
+        #                 param_group['lr'] = lr
 
-            print('Validation score %f' % val_score)
-            writer.add_scalar('Score/val', val_score, iteration)
-
-            is_better = len(val_scores) == 0 or val_score > np.max(val_scores)
-            if is_better:
-                patience = 0
-                print('Save currently the best model to [%s]' % model_save_path, file=sys.stderr)
-                model.save(model_save_path)
-                torch.save(optimizer.state_dict(), model_save_path + '.optim')
-            elif patience < int(args['--patience']):
-                patience += 1
-                print('hit patience %d' % patience, file=sys.stderr)
-
-                if patience == int(args['--patience']):
-                    num_trial += 1
-                    print('hit trial %d' % num_trial, file=sys.stderr)
-                    if num_trial == int(args['--max-num-trial']):
-                        print('early stop!', file=sys.stderr)
-                        exit(0)
-
-                    lr = optimizer.param_groups[0]['lr'] * float(args['--lr-decay'])
-
-                    print('load previously best model and decay learning rate to %f' % lr, file=sys.stderr)
-                    params = torch.load(model_save_path, map_location=lambda storage, loc: storage)
-                    model.load_state_dict(params['state_dict'])
-                    model = model.to(device)
-
-                    print('restore parameters of the optimizers', file=sys.stderr)
-                    optimizer.load_state_dict(torch.load(model_save_path + '.optim'))
-
-                    # set new lr
-                    for param_group in optimizer.param_groups:
-                        param_group['lr'] = lr
-
-                    patience = 0
+                    # patience = 0
 
     writer.close()
 
