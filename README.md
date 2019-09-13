@@ -1,2 +1,2 @@
-# TGNS
+# Temporally Grounding Natural Sentence in Video
 ...
