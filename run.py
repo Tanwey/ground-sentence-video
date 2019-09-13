@@ -270,7 +270,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    words, word_vectors = load_word_vectors('glove.840B.{}d.txt'.format(word_embed_size))
+    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
     # with open('vocab.txt', 'r') as f:
     #     words = f.readlines()

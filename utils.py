@@ -117,7 +117,6 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
 
         current_frame = 0
         fps = math.ceil(cap.get(cv2.CAP_PROP_FPS))
-        print('Frame per second is %d' % fps)
 
         while success:
             # if current_frame % 100 == 0:
