@@ -40,12 +40,21 @@ class TACoS(torch.utils.data.Dataset):
 
         files = os.listdir(textual_data_path)
         #files = ['s13-d21.aligned.tsv', 's13-d28.aligned.tsv', 's13-d31.aligned.tsv', 's13-d40.aligned.tsv']
+        files = ['s26-d69.aligned.tsv', 's21-d28.aligned.tsv', 's22-d29.aligned.tsv', 's15-d70.aligned.tsv',
+                 's27-d34.aligned.tsv', 's34-d41.aligned.tsv', 's22-d48.aligned.tsv', 's24-d28.aligned.tsv',
+                 's13-d28.aligned.tsv', 's36-d43.aligned.tsv', 's24-d48.aligned.tsv', 's30-d40.aligned.tsv',
+                 's23-d39.aligned.tsv', 's27-d70.aligned.tsv', 's24-d40.aligned.tsv', 's23-d31.aligned.tsv',
+                 's37-d25.aligned.tsv', 's23-d54.aligned.tsv', 's33-d54.aligned.tsv', 's31-d28.aligned.tsv',
+                 's13-d48.aligned.tsv', 's29-d31.aligned.tsv', 's25-d52.aligned.tsv', 's23-d51.aligned.tsv',
+                 's14-d35.aligned.tsv', 's22-d34.aligned.tsv', 's37-d46.aligned.tsv', 's28-d39.aligned.tsv',
+                 's22-d55.aligned.tsv', 's28-d51.aligned.tsv', 's17-d48.aligned.tsv', 's30-d52.aligned.tsv',
+                 's31-d31.aligned.tsv', 's32-d55.aligned.tsv', 's36-d42.aligned.tsv', 's35-d55.aligned.tsv',
+                 's28-d25.aligned.tsv', 's21-d50.aligned.tsv', 's24-d23.aligned.tsv', 's29-d52.aligned.tsv']
+
         if '.DS_Store' in files: files.remove('.DS_Store')
 
         self.textual_data = []
         tokenizer = ToktokTokenizer()
-
-        self.num_frames = dict()
 
         # loading the textual data
         print('Loading the textual data...', file=sys.stderr)
@@ -58,7 +67,7 @@ class TACoS(torch.utils.data.Dataset):
                     sents = set([sent for sent in row[6:] if len(sent) > 0])
                     sents = [tokenizer.tokenize(sent.lower()) for sent in sents]
                     self.textual_data += [Annotation(video_id=video_id, start_frame=start_frame, end_frame=end_frame,
-                                                    sent=sent) for sent in sents]
+                                                     sent=sent) for sent in sents]
 
         index_array = list(range(len(self.textual_data)))
         np.random.shuffle(index_array)
@@ -66,13 +75,12 @@ class TACoS(torch.utils.data.Dataset):
         val_size = int(val_ratio * len(index_array))
         test_size = int(test_ratio * len(index_array))
 
-        print('val size is %d' % val_size, file=sys.stderr)
-        print('test size is %d' % test_size, file=sys.stderr)
-
         self.val_indices = index_array[:val_size]
         self.test_indices = index_array[val_size:val_size+test_size]
         self.train_indices = index_array[val_size+test_size:]
 
+        print('val size is %d' % val_size, file=sys.stderr)
+        print('test size is %d' % test_size, file=sys.stderr)
         print('train size is %d' % len(self.train_indices), file=sys.stderr)
 
         # loading all of the preprocessed videos as numpy nd-arrays
@@ -103,12 +111,14 @@ class TACoS(torch.utils.data.Dataset):
         for v, s in zip(visual_data, textual_data):
             T = v.shape[0]
             label = torch.zeros([T, self.num_time_scales], dtype=torch.int32)
+            start_frame, end_frame = s.start_frame, s.end_frame
+
             for t in range(T):
-                start_frame, end_frame = s.start_frame, s.end_frame
                 for k in range(self.num_time_scales):
-                    if (compute_overlap((t - k * self.delta) * sample_rate,
+                    if (compute_overlap((t - (k+1) * self.delta) * sample_rate,
                                         t * sample_rate, start_frame, end_frame) / fps) > self.threshold:
                         label[t, k] = 1
+
             labels.append(label)
 
         return pad_labels(labels)  # torch.Tensor with shape (num_labels, T, K)
@@ -129,7 +139,7 @@ class TACoS(torch.utils.data.Dataset):
     def _load_visual_data(self, textual_data: List[Annotation]):
         """
         :param textual_data:
-        :return:
+        :return: list of the videos corresponding to the annotations
         """
         visual_data = []
         for t in textual_data:

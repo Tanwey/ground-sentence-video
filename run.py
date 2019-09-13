@@ -25,6 +25,7 @@ Options:
     --valid-niter=<int>                     perform validation after how many iterations [default: 50]
     --word-embed-size=<int>                 size of the glove word vectors [default: 50]
     --top-n-eval=<int>                      Parameter N in R@N, IOU=θ evaluation metric [default: 1]
+    --lr-decay=<float>                      learning rate decay [default: 0.5]
 """
 
 import torch
@@ -33,7 +34,7 @@ from models.tgn import TGN
 from docopt import docopt
 from typing import Dict, List
 from vocab import Vocab
-from utils import load_word_vectors, pad_visual_data, pad_textual_data
+from utils import load_word_vectors
 import numpy as np
 import sys
 from data import TACoS
@@ -43,6 +44,7 @@ from time import time
 from torch.nn.init import xavier_normal_, normal_
 from torch.utils.tensorboard import SummaryWriter
 from utils import compute_overlap
+import numpy as np
 
 
 def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[int], args: Dict):
@@ -64,14 +66,18 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     _, indices = torch.topk(y_pred.view(n_batch, -1), k=int(args['--top-n-eval']), dim=-1)
 
     end_time_steps = (indices // K) * sample_rate  # tensor with shape (n_batch, top_n_eval)
-
-    scale_nums = indices % K
+    scale_nums = (indices % K) + 1
     start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
 
+    #end_time_steps = (indices.view(-1) // K) * sample_rate
+    #scale_nums = indices.view(-1) % K
+    #start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
+
     score = 0
+
     for i in range(n_batch):
         val = np.max([compute_overlap(start_time_step.item(), end_time_step.item(), start_frames[i], end_frames[i])
-                        for start_time_step, end_time_step in zip(start_time_steps, end_time_steps)])
+                      for start_time_step, end_time_step in zip(start_time_steps[i], end_time_steps[i])])
         score += int(val/fps > threshold)
 
     return score
@@ -264,7 +270,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 if __name__ == '__main__':
     args = docopt(__doc__)
     word_embed_size = int(args['--word-embed-size'])
-    words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
+    words, word_vectors = load_word_vectors('glove.840B.{}d.txt'.format(word_embed_size))
 
     # with open('vocab.txt', 'r') as f:
     #     words = f.readlines()

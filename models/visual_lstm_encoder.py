@@ -14,7 +14,7 @@ class VisualLSTMEncoder(nn.Module):
 
     def forward(self, input: torch.Tensor, lengths: List[int]):
         """
-        :param input: A batch of frame features with shape ()
+        :param input: A batch of frame features with shape (n_batch, T, feature_size)
         :param lengths:
         :return: the encoded representation of the frames
         """

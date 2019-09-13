@@ -6,7 +6,7 @@ from typing import List
 
 
 class TextualLSTMEncoder(nn.Module):
-    def __init__(self, embed_size, hidden_size):
+    def __init__(self, embed_size: int, hidden_size: int):
         """
         :param embed_size: embedding dimension of the words
         :param hidden_size: hidden size of the LSTM encoder
@@ -19,7 +19,7 @@ class TextualLSTMEncoder(nn.Module):
     def forward(self, input: torch.Tensor, lengths: List[int]):
         """
         :param input: A batch of sentences with shape (n_batch, N, embed_size)
-        :param lengths:
+        :param lengths: lengths of the input sentences
         :return: the encoded representation of the sentences
         """
         x = input.permute(1, 0, 2)  # shape (N, n_batch, embed_size)

@@ -14,15 +14,8 @@ import sys
 class TGN(nn.Module):
     def __init__(self, word_embed_size: int, hidden_size_textual: int, hidden_size_visual: int,
                  hidden_size_ilstm: int, num_time_scales: int):
-        """
-        :param args: Dict of experimental settings
-        """
         super(TGN, self).__init__()
 
-        #hidden_size_textual = int(args['--hidden-size-textual-lstm'])
-        #hidden_size_visual = int(args['--hidden-size-visual-lstm'])
-        #hidden_size_ilstm = int(args['--hidden-size-ilstm'])
-        #self.num_time_scales = int(args['--num-time-scales'])
         self.word_embed_size = word_embed_size
         self.hidden_size_visual = hidden_size_visual
         self.hidden_size_textual = hidden_size_textual
@@ -49,9 +42,7 @@ class TGN(nn.Module):
         :param visual_input:
         :param textual_input: a tensor containing a batch of embedded words
         with shape (n_batch, N, sentence_length, word_embed_size: 300)
-        :param lengths_t:
-        :param y:
-        :param videos_mask:
+        :param lengths_t: lengths of sentences
         :return: grounding scores with shape (n_batch, T, K)
         """
         lengths_v = [v.shape[0] for v in visual_input]
@@ -97,8 +88,9 @@ class TGN(nn.Module):
 
     @staticmethod
     def load(model_path: str):
-        """ Load the model from a file.
-        @param model_path (str): path to model
+        """
+        Load the model from a file.
+        :param model_path: path to model
         """
         params = torch.load(model_path, map_location=lambda storage, loc: storage)
         args = params['args']
@@ -108,7 +100,8 @@ class TGN(nn.Module):
         return model
 
     def save(self, path: str):
-        """ Save the model to a file.
+        """
+        Save the model to a file.
         :param path: path to the model
         """
         print('save model parameters to [%s]' % path, file=sys.stderr)
