@@ -69,10 +69,6 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     scale_nums = (indices % K) + 1
     start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
 
-    #end_time_steps = (indices.view(-1) // K) * sample_rate
-    #scale_nums = indices.view(-1) % K
-    #start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
-
     score = 0
 
     for i in range(n_batch):
@@ -150,7 +146,8 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     model = TGN(hidden_size_ilstm=int(args['--hidden-size-ilstm']),
                 hidden_size_textual=int(args['--hidden-size-textual-lstm']),
                 hidden_size_visual=int(args['--hidden-size-visual-lstm']),
-                num_time_scales=num_time_scales, word_embed_size=int(args['--word-embed-size']))
+                num_time_scales=num_time_scales,
+                word_embed_size=int(args['--word-embed-size']))
 
     model.train()
 
@@ -166,9 +163,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
     model = model.to(device)
     embedding.to(device)
-
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
-
     dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path,
                     num_time_scales=num_time_scales, delta=delta, threshold=threshold)
 

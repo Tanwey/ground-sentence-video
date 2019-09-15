@@ -16,8 +16,8 @@ class VGG16(nn.Module):
 
     def forward(self, x: torch.Tensor):
         """
-        :param x: A batch of images with shape (K, 224, 224, 3)
-        :return: extracted features with shape (K, 4096)
+        :param x: A bunch of frames as a torch.Tensor with shape (K, 224, 224, 3)
+        :return: a torch.Tensor containing the extracted features with shape (K, 4096)
         """
         self.model.eval()
         return self.model(x)

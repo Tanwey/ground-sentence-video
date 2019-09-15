@@ -92,21 +92,7 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
-    #video_files = os.listdir(visual_data_path)
-    #video_files = ['s13-d21.avi', 's13-d28.avi', 's13-d31.avi', 's13-d40.avi']
-    video_files = ['s26-d69.aligned.tsv', 's21-d28.aligned.tsv', 's22-d29.aligned.tsv', 's15-d70.aligned.tsv',
-             's27-d34.aligned.tsv', 's34-d41.aligned.tsv', 's22-d48.aligned.tsv', 's24-d28.aligned.tsv',
-             's13-d28.aligned.tsv', 's36-d43.aligned.tsv', 's24-d48.aligned.tsv', 's30-d40.aligned.tsv',
-             's23-d39.aligned.tsv', 's27-d70.aligned.tsv', 's24-d40.aligned.tsv', 's23-d31.aligned.tsv',
-             's37-d25.aligned.tsv', 's23-d54.aligned.tsv', 's33-d54.aligned.tsv', 's31-d28.aligned.tsv',
-             's13-d48.aligned.tsv', 's29-d31.aligned.tsv', 's25-d52.aligned.tsv', 's23-d51.aligned.tsv',
-             's14-d35.aligned.tsv', 's22-d34.aligned.tsv', 's37-d46.aligned.tsv', 's28-d39.aligned.tsv',
-             's22-d55.aligned.tsv', 's28-d51.aligned.tsv', 's17-d48.aligned.tsv', 's30-d52.aligned.tsv',
-             's31-d31.aligned.tsv', 's32-d55.aligned.tsv', 's36-d42.aligned.tsv', 's35-d55.aligned.tsv',
-             's28-d25.aligned.tsv', 's21-d50.aligned.tsv', 's24-d23.aligned.tsv', 's29-d52.aligned.tsv']
-
-    video_files = [v.replace('.aligned.tsv', '.avi') for v in video_files]
-
+    video_files = os.listdir(visual_data_path)
     if '.DS_Store' in video_files: video_files.remove('.DS_Store')
 
     for video_file in video_files:

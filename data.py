@@ -39,18 +39,6 @@ class TACoS(torch.utils.data.Dataset):
                                                                   std=[0.229, 0.224, 0.225])])
 
         files = os.listdir(textual_data_path)
-        #files = ['s13-d21.aligned.tsv', 's13-d28.aligned.tsv', 's13-d31.aligned.tsv', 's13-d40.aligned.tsv']
-        files = ['s26-d69.aligned.tsv', 's21-d28.aligned.tsv', 's22-d29.aligned.tsv', 's15-d70.aligned.tsv',
-                 's27-d34.aligned.tsv', 's34-d41.aligned.tsv', 's22-d48.aligned.tsv', 's24-d28.aligned.tsv',
-                 's13-d28.aligned.tsv', 's36-d43.aligned.tsv', 's24-d48.aligned.tsv', 's30-d40.aligned.tsv',
-                 's23-d39.aligned.tsv', 's27-d70.aligned.tsv', 's24-d40.aligned.tsv', 's23-d31.aligned.tsv',
-                 's37-d25.aligned.tsv', 's23-d54.aligned.tsv', 's33-d54.aligned.tsv', 's31-d28.aligned.tsv',
-                 's13-d48.aligned.tsv', 's29-d31.aligned.tsv', 's25-d52.aligned.tsv', 's23-d51.aligned.tsv',
-                 's14-d35.aligned.tsv', 's22-d34.aligned.tsv', 's37-d46.aligned.tsv', 's28-d39.aligned.tsv',
-                 's22-d55.aligned.tsv', 's28-d51.aligned.tsv', 's17-d48.aligned.tsv', 's30-d52.aligned.tsv',
-                 's31-d31.aligned.tsv', 's32-d55.aligned.tsv', 's36-d42.aligned.tsv', 's35-d55.aligned.tsv',
-                 's28-d25.aligned.tsv', 's21-d50.aligned.tsv', 's24-d23.aligned.tsv', 's29-d52.aligned.tsv']
-
         if '.DS_Store' in files: files.remove('.DS_Store')
 
         self.textual_data = []
@@ -169,7 +157,6 @@ class TACoS(torch.utils.data.Dataset):
             textual_data = [self.textual_data[idx] for idx in indices]
             textual_data = sorted(textual_data, key=lambda s: len(s.sent), reverse=True)
 
-            #visual_data = [self.visual_data[s.video_id] for s in textual_data]
             visual_data = self._load_visual_data(textual_data)
 
             if set == 'train':

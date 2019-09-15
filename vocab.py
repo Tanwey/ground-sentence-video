@@ -26,26 +26,25 @@ class Vocab(object):
     def __getitem__(self, word):
         """ Retrieve word's index. Return the index for the unk
         token if the word is out of vocabulary.
-        @param word (str): word to look up.
-        @returns index (int): index of word
+        :param word: word to look up.
+        :returns index: index of word
         """
         return self.word2id.get(word, self.word2id['<unk>'])
 
     def __contains__(self, word):
         """ Check if word is captured by VocabEntry.
-        @param word (str): word to look up
-        @returns contains (bool): whether word is contained
+        :param word: word to look up
+        :returns contains: whether word is contained
         """
         return word in self.word2id
 
     def __setitem__(self, key, value):
-        """ Raise error, if one tries to edit the VocabEntry.
-        """
+        """ Raise error, if one tries to edit the VocabEntry."""
         raise ValueError('vocabulary is readonly')
 
     def __len__(self):
         """ Compute number of words in VocabEntry.
-        @returns len (int): number of words in VocabEntry
+        :returns len: number of words in VocabEntry
         """
         return len(self.word2id)
 
@@ -57,8 +56,8 @@ class Vocab(object):
 
     def id2word(self, wid):
         """ Return mapping of index to word.
-        @param wid (int): word index
-        @returns word (str): word corresponding to index
+        :param wid: word index
+        :returns word: word corresponding to index
         """
         return self.id2word[wid]
 
@@ -84,10 +83,10 @@ class Vocab(object):
         else:
             return [self[w] for w in sents]
 
-    def indices2words(self, word_ids):
+    def indices2words(self, word_ids: List[int]):
         """ Convert list of indices into words.
-        @param word_ids (list[int]): list of word ids
-        @return sents (list[str]): list of words
+        :param word_ids: list of word ids
+        :returns sents: list of words
         """
         return [self.id2word[w_id] for w_id in word_ids]
 
@@ -96,11 +95,9 @@ class Vocab(object):
         shorter sentences.
         :param sents: list of sentences (words)
         :param device: device on which to load the tesnor, i.e. CPU or GPU
-
         :returns sents_var: tensor of (batch_size, max_sentence_length)
         """
         word_ids = self.words2indices(sents)
         sents_t = pad_textual_data(word_ids, self['<pad>'])
         sents_var = torch.tensor(sents_t, dtype=torch.long, device=device)
         return sents_var
-
