@@ -2,8 +2,10 @@
 run.py: Run the Temporally Grounding Network (TGN) model
 
 Usage:
-    run.py train --textual-data-path=<dir> --visual-data-path=<dir> [options]
-    run.py test --textual-data-path=<file> --visual-data-path=<file> [options]
+    run.py train-tacos --textual-data-path=<dir> --visual-data-path=<dir> [options]
+    run.py train-acnet --textual-data-path=<dir> --visual-data-path=<dir> [options]
+    run.py test-tacos --textual-data-path=<file> --visual-data-path=<file> [options]
+    run.py test-acnet --textual-data-path=<file> --visual-data-path=<file> [options]
 
 Options:
     -h --help                               show this screen
@@ -14,10 +16,10 @@ Options:
     --hidden-size-visual-lstm=<int>         hidden size of visual lstm [default: 512]
     --hidden-size-ilstm=<int>               hidden size of ilstm [default: 512]
     --log-every=<int>                       log every [default: 10]
-    --max-iter=<int>                        maximum number of iterations of training [default: 1000]
+    --max-iter=<int>                        maximum number of iterations of training [default: 2000]
     --lr=<float>                            learning rate [default: 0.001]
     --patience=<int>                        waiting for how many iterations to decay learning rate [default: 5]
-    --num-time-scales=<int>                 parameter K in the paper
+    --K=<int>                               parameter K in the paper
     --delta=<int>                           parameter ẟ in the paper
     --threshold=<float>                     parameter θ in the paper
     --max-num-trial=<int>                   terminate training after how many trials [default: 5]
@@ -37,7 +39,7 @@ from vocab import Vocab
 from utils import load_word_vectors
 import numpy as np
 import sys
-from data import TACoS
+from data import TACoS, ActivityNet
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from time import time
@@ -45,18 +47,44 @@ from torch.nn.init import xavier_normal_, normal_
 from torch.utils.tensorboard import SummaryWriter
 from utils import compute_overlap
 import numpy as np
+import os
+from math import ceil
 
 
-def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[int], args: Dict):
+def find_bce_weights(dataset: TACoS, K: int, device):
+    
+    if not os.path.exists('w0.pt'):
+        print('Calculating BCE weights w0 and w1...', file=sys.stderr)
+        w0 = torch.zeros([K, ], dtype=torch.float32)
+
+        num_samples = len(dataset)
+        time_steps = 0
+
+        for i in tqdm(range(num_samples)):
+            _, _, label = dataset[i]
+            T = label.shape[0]
+            time_steps += T
+            tmp = torch.sum(label, dim=0).to(torch.float32)
+            w0 += T - tmp
+
+        torch.save(w0, 'w0.pt')
+        w0 = (w0 / time_steps).to(device)
+        
+        return w0, 1-w0
+    else:
+        print('Loading BCE weights w0 and w1...', file=sys.stderr)
+        w0 = torch.load('w0.pt')
+        w0 = w0.to(device)
+        return w0, 1-w0
+
+
+def top_n_iou(y_pred: torch.Tensor, starts: List[int], ends: List[int], args: Dict, fps: int, sample_rate: int):
     """
     :param y_pred: torch.Tensor with shape (n_batch, T, K)
     :param start_frames: ground truth start frames with len (n_batch,)
     :param end_frames: ground truth end frames with len (n_batch,)
     :returns score: validation score
     """
-    fps = 30
-    sample_rate = fps * 5
-
     n_batch, T, K = y_pred.shape
 
     delta = int(args['--delta'])
@@ -72,39 +100,22 @@ def top_n_iou(y_pred: torch.Tensor, start_frames: List[int], end_frames: List[in
     score = 0
 
     for i in range(n_batch):
-        val = np.max([compute_overlap(start_time_step.item(), end_time_step.item(), start_frames[i], end_frames[i])
+        val = np.max([compute_overlap(start_time_step.item(), end_time_step.item(), starts[i], ends[i])
                       for start_time_step, end_time_step in zip(start_time_steps[i], end_time_steps[i])])
         score += int(val/fps > threshold)
 
     return score
+        
 
-
-def find_bce_weights(dataset: TACoS, num_time_scales: int, device):
-    print('Calculating Binary Cross Entropy weights w0 and w1...', file=sys.stderr)
-    w0 = torch.zeros([num_time_scales, ], dtype=torch.float32)
-
-    num_samples = len(dataset)
-    time_steps = 0
-
-    for i in tqdm(range(num_samples)):
-        _, _, label = dataset[i]
-        T = label.shape[0]
-        time_steps += T
-        tmp = torch.sum(label, dim=0).to(torch.float32)
-        w0 += T - tmp
-
-    w0 = (w0 / time_steps).to(device)
-
-    return w0, 1-w0
-
-
-def eval(model: TGN, dataset: TACoS, device, embedding: nn.Embedding, args: Dict):
+def eval(model: TGN, dataset, device, embedding: nn.Embedding, args: Dict, fps: int, sample_rate: int):
     was_training = model.training
 
     batch_size = int(args['--batch-size'])
 
     with torch.no_grad():
         cum_score = cum_samples = 0
+
+        pbar = tqdm(total=ceil(len(dataset.val_captions) / batch_size))
 
         for textual_data, visual_data in iter(dataset.data_iter(batch_size, 'val')):
             cum_samples += len(textual_data)
@@ -115,11 +126,14 @@ def eval(model: TGN, dataset: TACoS, device, embedding: nn.Embedding, args: Dict
 
             probs, mask = model(visual_data, textual_data_embed_tensor, lengths_t)  # Tensors with shape (n_batch, T, K)
 
-            start_frames = [t.start_frame for t in textual_data]
-            end_frames = [t.end_frame for t in textual_data]
+            starts = [t.start for t in textual_data]
+            ends = [t.end for t in textual_data]
 
-            score = top_n_iou(probs*mask, start_frames, end_frames, args)
+            score = top_n_iou(probs*mask, starts, ends, args, fps, sample_rate)
             cum_score += score
+            pbar.update()
+
+        pbar.close()
 
     if was_training:
         model.train()
@@ -134,7 +148,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     visual_data_path = args['--visual-data-path']
     batch_size = int(args['--batch-size'])
     delta = int(args['--delta'])
-    num_time_scales = int(args['--num-time-scales'])
+    K = int(args['--K'])
     lr = float(args['--lr'])
     log_every = int(args['--log-every'])
     threshold = float(args['--threshold'])
@@ -146,7 +160,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     model = TGN(hidden_size_ilstm=int(args['--hidden-size-ilstm']),
                 hidden_size_textual=int(args['--hidden-size-textual-lstm']),
                 hidden_size_visual=int(args['--hidden-size-visual-lstm']),
-                num_time_scales=num_time_scales,
+                K=K,
                 word_embed_size=int(args['--word-embed-size']))
 
     model.train()
@@ -164,12 +178,21 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
     model = model.to(device)
     embedding.to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(0.5, 0.999))
-    dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path,
-                    num_time_scales=num_time_scales, delta=delta, threshold=threshold)
+    
+    if args['train-tacos']:
+        dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path, 
+                        K=K, delta=delta, threshold=threshold)
+        fps = 30
+        sample_rate = fps * 5  # sample one frame every five seconds
+    elif args['train-acnet']:
+        dataset = ActivityNet(textual_data_path=textual_data_path, visual_data_path=visual_data_path, 
+                              K=K, delta=delta, threshold=threshold)
+        fps = 24
+        sample_rate = fps * 1  # sample one frame every one second
 
     writer = SummaryWriter()
 
-    w0, w1 = find_bce_weights(dataset, num_time_scales, device)  # Tensors with shape (K,)
+    w0, w1 = find_bce_weights(dataset, K, device)  # Tensors with shape (K,)
 
     cum_samples = report_samples = 0.
     report_loss = cum_loss = 0.
@@ -182,24 +205,23 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
 
     for iteration in range(max_iter):
 
-        # getting visual_data, textual_data, labels each one as a list
-        textual_data, visual_data, y = next(dataset.data_iter(batch_size, 'train'))
-
+        textual_data, visual_features, y = next(dataset.data_iter(batch_size, 'train'))
+        
         lengths_t = [len(t) for t in textual_data]
         textual_data_tensor = vocab.to_input_tensor(textual_data, device=device)  # tensor with shape (n_batch, N)
         textual_data_embed_tensor = embedding(textual_data_tensor)  # tensor with shape (n_batch, N, embed_size)
-
+        
         optimizer.zero_grad()
 
         # Computing probs and mask with shape (n_batch, T, K)
-        probs, mask = model(textual_input=textual_data_embed_tensor, visual_input=visual_data, lengths_t=lengths_t)
+        probs, mask = model(textual_input=textual_data_embed_tensor, features_v=visual_features, lengths_t=lengths_t)
 
         y = y.to(device)
         batch_loss = -torch.sum((w0 * y * torch.log(probs) + w1 * (1 - y) * torch.log(1 - probs)) * mask)
         batch_loss_val = batch_loss.item()
 
-        cum_samples += batch_size
-        report_samples += batch_size
+        cum_samples += len(textual_data)
+        report_samples += len(textual_data)
         report_loss += batch_loss_val
         cum_loss += batch_loss_val
 
@@ -219,14 +241,23 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict):
             train_time = time()
 
         if iteration % valid_niter == 0:
+            print('\nIteration number %d, cum. loss %.2f, cum. samples %d' % (iteration, 
+                                                                              cum_loss / cum_samples, 
+                                                                              cum_samples))
+            
+            cum_samples = 0
+            cum_loss = 0.
+            
             print('Begin Validation...')
             val_score = eval(model=model, dataset=dataset, device=device,
-                             embedding=embedding, args=args)
+                             embedding=embedding, args=args, sample_rate=sample_rate, fps=fps)
 
             print('Validation score %f' % val_score)
             writer.add_scalar('Score/val', val_score, iteration)
 
             is_better = len(val_scores) == 0 or val_score > np.max(val_scores)
+            val_scores.append(val_score)
+            
             if is_better:
                 patience = 0
                 print('Save currently the best model to [%s]' % model_save_path, file=sys.stderr)
@@ -272,4 +303,6 @@ if __name__ == '__main__':
     # word_vectors = np.zeros([len(words)+2, 50])
 
     vocab = Vocab(words)
-    train(vocab, word_vectors, args)
+    
+    if args['train-tacos'] or args['train-acnet']:
+        train(vocab, word_vectors, args)

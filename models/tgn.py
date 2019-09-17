@@ -13,31 +13,33 @@ import sys
 
 class TGN(nn.Module):
     def __init__(self, word_embed_size: int, hidden_size_textual: int, hidden_size_visual: int,
-                 hidden_size_ilstm: int, num_time_scales: int):
+                 hidden_size_ilstm: int, K: int):
         super(TGN, self).__init__()
 
         self.word_embed_size = word_embed_size
         self.hidden_size_visual = hidden_size_visual
         self.hidden_size_textual = hidden_size_textual
         self.hidden_size_ilstm = hidden_size_ilstm
-        self.num_time_scales = num_time_scales
+        self.K = K
 
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
-        self.cnn_encoder = VGG16()
+#       self.cnn_encoder = VGG16()
 
-        self.feature_size = self.cnn_encoder.model.classifier[-3].out_features
+#       self.feature_size = self.cnn_encoder.model.classifier[-3].out_features
+
+        self.feature_size = 500
 
         self.visual_lstm_encoder = VisualLSTMEncoder(input_size=self.feature_size, hidden_size=hidden_size_visual)
 
         self.grounder = Grounder(input_size=hidden_size_ilstm,
-                                 num_time_scales=self.num_time_scales)
+                                 K=K)
 
         self.interactor = Interactor(hidden_size_ilstm=hidden_size_ilstm,
                                      hidden_size_visual=hidden_size_visual,
                                      hidden_size_textual=hidden_size_textual)
 
-    def forward(self, visual_input, textual_input: torch.Tensor, lengths_t: List[int]):
+    def forward(self, features_v: List[torch.Tensor], textual_input: torch.Tensor, lengths_t: List[int]):
         """
         :param visual_input:
         :param textual_input: a tensor containing a batch of embedded words
@@ -45,17 +47,18 @@ class TGN(nn.Module):
         :param lengths_t: lengths of sentences
         :return: grounding scores with shape (n_batch, T, K)
         """
-        lengths_v = [v.shape[0] for v in visual_input]
+        lengths_v = [v.shape[0] for v in features_v]
 
         mask = self._generate_videos_mask(lengths_v)
 
-        visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
+#         visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
 
-        features_v_cat = self.cnn_encoder(visual_input_cat.to(self.device))  # shape: (n_batch, T, feature_size)
-        features_v = torch.split(features_v_cat, lengths_v)
+#         features_v_cat = self.cnn_encoder(visual_input_cat.to(self.device))  # shape: (n_batch, T, feature_size)
+#         features_v = torch.split(features_v_cat, lengths_v)
 
         features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
         lengths_v = sorted(lengths_v, reverse=True)
+        
         features_v_padded = pad_visual_data(features_v, self.device)  # shape (n_batch, T, dim_feature)
 
         h_s = self.textual_lstm_encoder(textual_input, lengths_t)  # shape: (n_batch, N, hidden_size_textual)
@@ -72,7 +75,7 @@ class TGN(nn.Module):
         n_batch = len(lengths)
         max_len = np.max(lengths)
 
-        mask = torch.ones(n_batch, max_len, self.num_time_scales)
+        mask = torch.ones(n_batch, max_len, self.K)
 
         for i in range(len(lengths)):
             mask[i, lengths[i]:, :] = 0
@@ -109,7 +112,7 @@ class TGN(nn.Module):
         params = {
             'args': dict(word_embed_size=self.word_embed_size, hidden_size_textual=self.hidden_size_visual,
                          hidden_size_visual=self.hidden_size_visual, hidden_size_ilstm=self.hidden_size_ilstm,
-                         num_time_scales=self.num_time_scales),
+                         K=self.K),
             'state_dict': self.state_dict()
         }
 

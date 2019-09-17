@@ -2,8 +2,9 @@
 Some utility functions
 
 Usage:
-    utils.py process-visual-data-tacos --visual-data-path=<dir> --processed-visual-data-path=<dir> --output-frame-size=<int>
-    utils.py find_K
+    utils.py extract-frames-tacos --visual-data-path=<dir> --processed-visual-data-path=<dir> --output-frame-size=<int>
+    utils.py find-K --textual-data-path=<dir>
+    utils.py extract-features --frames-path=<dir> --features-path=<dir>
 
 """
 
@@ -18,11 +19,13 @@ import os
 import cv2
 import math
 import csv
+from torchvision import transforms
 from matplotlib import pyplot as plt
 from skimage import transform
 from docopt import docopt
 import sys
 import torch.nn as nn
+from models.cnn_encoder import VGG16
 
 
 def pad_textual_data(sents: List[List[str]], pad_token):
@@ -49,7 +52,7 @@ def pad_visual_data(visual_data: List[torch.Tensor], device):
     feature_dim = visual_data[0].shape[1]
     max_len = np.max([v.shape[0] for v in visual_data])
 
-    visual_data_padded = list(map(lambda v: torch.cat([v,
+    visual_data_padded = list(map(lambda v: torch.cat([v.to(device),
                                                        torch.zeros([max_len - v.shape[0], feature_dim]).to(device)]
                                                       ).unsqueeze(dim=0), visual_data))
 
@@ -73,7 +76,7 @@ def pad_labels(labels: List[torch.Tensor]):
 
 
 def load_word_vectors(glove_file_path):
-    print('Loading Glove word vectors from {}...'.format(glove_file_path), file=sys.stderr)
+    print('Loading GloVE word vectors from {}...'.format(glove_file_path), file=sys.stderr)
 
     if not os.path.exists('glove.word2vec.txt'):
         glove2word2vec(glove_file_path, 'glove.word2vec.txt')
@@ -87,13 +90,12 @@ def load_word_vectors(glove_file_path):
     return words, word_vectors
 
 
-def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path: str, output_frame_size: Tuple):
+def extract_frames_tacos(visual_data_path: str, processed_visual_data_path: str, output_frame_size: Tuple):
 
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
     video_files = os.listdir(visual_data_path)
-    if '.DS_Store' in video_files: video_files.remove('.DS_Store')
 
     for video_file in video_files:
         print('processing %s...' % video_file)
@@ -105,12 +107,10 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
         fps = math.ceil(cap.get(cv2.CAP_PROP_FPS))
 
         while success:
-            # if current_frame % 100 == 0:
-            #     print('\t***frame number %d' % current_frame)
 
             success, frame = cap.read()
             if success:
-                if current_frame % (fps * 5) == 0:  # capturing one frame every five seconds
+                if current_frame % (fps * 5) == 0:  # sampling one frame every five seconds
                     frame = transform.resize(frame, output_frame_size)  # resize the image
                     frames.append(np.expand_dims(frame, axis=0))
             else:
@@ -121,18 +121,42 @@ def process_visual_data_tacos(visual_data_path: str, processed_visual_data_path:
         output_file = os.path.join(processed_visual_data_path, video_file.replace('.avi', '.npy'))
         np.save(output_file, frames)
 
+        
+def extract_features(frames_path: str, features_path: str):
+    """
+    extract the features using the cnn encoder.
+    """
+    files = os.listdir(frames_path)
+    
+    # A standard transform needed to be applied to inputs of the models pre-trained on ImageNet
+    transform_ = transforms.Compose([transforms.ToTensor(), 
+                                     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    cnn_encoder = VGG16()
+    device = 'cuda:0'
+    cnn_encoder.to(device)
+    
+    for file in files:
+        print('Extracting features of %s' % file)
+        frames = np.load(os.path.join(preprocessed_visual_data_path, file))
+        frames_tensor = torch.cat([transform_(frame).unsqueeze(dim=0) for frame in frames], dim=0)
+        features = cnn_encoder(frames_tensor.to(device))
+        out_file = os.path.join(features_path, file.replace('.npy', '_features.pt'))
+        torch.save(features, out_file)
+        
 
-def process_visual_data_activitynet():
+def load_features_activitynet(features_path: str):
+    video_ids = list(fid.keys())
+
+    # This line clearly shows that the features are stored as Group/Dataset
+    feat_video_ith = fid[video_lst[ith]]['c3d_features'][:]
+    
+    return 
+
+def extract_frames_didemo():
     pass
 
 
-def process_visual_data_didemo():
-    pass
-
-
-def find_K():
-    textual_data_path = 'data/textual_data/TACoS'
-
+def find_K(textual_data_path: str):
     lengths = []
     for file in os.listdir(textual_data_path):
         with open(os.path.join(textual_data_path, file)) as tsvfile:
@@ -177,5 +201,7 @@ if __name__ == '__main__':
         processed_visual_data_path = args['--processed-visual-data-path']
         output_frame_size = int(args['--output-frame-size'])
         process_visual_data_tacos(visual_data_path, processed_visual_data_path, (output_frame_size, output_frame_size))
-
-
+    elif args['extract-features']:
+        extract_features(args['--preprocessed-visual-data-path'], args['--features-path'])
+    elif args['find-K']:
+        find_K(args['--textual-data-path'])
