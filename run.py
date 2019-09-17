@@ -78,11 +78,12 @@ def find_bce_weights(dataset: TACoS, K: int, device):
         return w0, 1-w0
 
 
-def top_n_iou(y_pred: torch.Tensor, starts: List[int], ends: List[int], args: Dict, fps: int, sample_rate: int):
+def top_n_iou(y_pred: torch.Tensor, gold_start_times: List[int], gold_end_times: List[int], args: Dict,
+              fps: int, sample_rate: int):
     """
     :param y_pred: torch.Tensor with shape (n_batch, T, K)
-    :param start_frames: ground truth start frames with len (n_batch,)
-    :param end_frames: ground truth end frames with len (n_batch,)
+    :param gold_start_times: ground truth start frames with len (n_batch,)
+    :param gold_end_times: ground truth end frames with len (n_batch,)
     :returns score: validation score
     """
     n_batch, T, K = y_pred.shape
@@ -93,16 +94,17 @@ def top_n_iou(y_pred: torch.Tensor, starts: List[int], ends: List[int], args: Di
     # computing indices which is a Tensor with shape (n_batch, top_n_eval)
     _, indices = torch.topk(y_pred.view(n_batch, -1), k=int(args['--top-n-eval']), dim=-1)
 
-    end_time_steps = (indices // K) * sample_rate  # tensor with shape (n_batch, top_n_eval)
+    end_times = (indices // K) * sample_rate / fps  # tensor with shape (n_batch, top_n_eval)
     scale_nums = (indices % K) + 1
-    start_time_steps = end_time_steps - (scale_nums * delta * sample_rate)
+    start_times = end_times - (scale_nums * delta * sample_rate / fps)
 
     score = 0
 
     for i in range(n_batch):
-        val = np.max([compute_overlap(start_time_step.item(), end_time_step.item(), starts[i], ends[i])
-                      for start_time_step, end_time_step in zip(start_time_steps[i], end_time_steps[i])])
-        score += int(val/fps > threshold)
+        max_overlap = np.max([compute_overlap(start_time.item(), end_time.item(), gold_start_times[i],
+                                              gold_end_times[i])
+                              for start_time, end_time in zip(start_times[i], end_times[i])])
+        score += int(max_overlap > threshold)
 
     return score
         
@@ -126,10 +128,10 @@ def eval(model: TGN, dataset, device, embedding: nn.Embedding, args: Dict, fps: 
 
             probs, mask = model(visual_data, textual_data_embed_tensor, lengths_t)  # Tensors with shape (n_batch, T, K)
 
-            starts = [t.start for t in textual_data]
-            ends = [t.end for t in textual_data]
+            gold_start_times = [t.start_time for t in textual_data]
+            gold_end_times = [t.end_time for t in textual_data]
 
-            score = top_n_iou(probs*mask, starts, ends, args, fps, sample_rate)
+            score = top_n_iou(probs*mask, gold_start_times, gold_end_times, args, fps, sample_rate)
             cum_score += score
             pbar.update()
 

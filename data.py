@@ -15,7 +15,7 @@ import json
 import h5py
 
 
-Caption = namedtuple('Caption', ['video_id', 'start', 'end', 'sent'])
+Caption = namedtuple('Caption', ['video_id', 'start_time', 'end_time', 'sent'])
 
 
 class TACoS(torch.utils.data.Dataset):
@@ -37,10 +37,13 @@ class TACoS(torch.utils.data.Dataset):
 
         files = os.listdir(textual_data_path)
 
-        self.textual_data = []
+        self.captions = []
         tokenizer = ToktokTokenizer()
 
         # loading the textual data
+
+        fps = 30
+
         print('Loading the textual data...', file=sys.stderr)
         for file in files:
             with open(os.path.join(textual_data_path, file)) as tsvfile:
@@ -50,11 +53,11 @@ class TACoS(torch.utils.data.Dataset):
                     start_frame, end_frame = int(row[0]), int(row[1])
                     sents = set([sent for sent in row[6:] if len(sent) > 0])
                     sents = [tokenizer.tokenize(sent.lower()) for sent in sents]
-                    self.textual_data += [Caption(video_id=video_id, start=start_frame, end=end_frame, 
-                                                  sent=sent) for sent in sents]
+                    self.captions += [Caption(video_id=video_id, start_time=start_frame / 30, end_time=end_frame / 30,
+                                              sent=sent) for sent in sents]
 
         np.random.seed(42)
-        index_array = list(range(len(self.textual_data)))
+        index_array = list(range(len(self.captions)))
         np.random.shuffle(index_array)
 
         val_size = int(val_ratio * len(index_array))
@@ -69,9 +72,9 @@ class TACoS(torch.utils.data.Dataset):
         print('Train set size is %d' % len(self.train_indices), file=sys.stderr)
 
     def __len__(self):
-        return len(self.textual_data)
+        return len(self.captions)
 
-    def _generate_labels(self, visual_data: List[torch.Tensor], textual_data: List[Caption]):
+    def _generate_labels(self, visual_data: List[torch.Tensor], captions: List[Caption]):
         """
         :param visual_data: a list of extracted features from videos
         :param textual_data: list of annotations
@@ -81,18 +84,18 @@ class TACoS(torch.utils.data.Dataset):
         fps = 30
         
         # note that we sampled one frame every five seconds while we pre-processed the data
-        sample_rate = fps * 5
+        sample_rate = 150
 
         labels = []
-        for v, s in zip(visual_data, textual_data):
+        for v, s in zip(visual_data, captions):
             T = v.shape[0]
             label = torch.zeros([T, self.K], dtype=torch.int32)
-            start_frame, end_frame = s.start, s.end
+            start_time, end_time = s.start_time, s.end_time
 
             for t in range(T):
                 for k in range(self.K):
-                    if (compute_overlap((t - (k+1) * self.delta) * sample_rate,
-                                        t * sample_rate, start_frame, end_frame) / fps) > self.threshold:
+                    if (compute_overlap((t - (k+1) * self.delta) * sample_rate / fps,
+                                        t * sample_rate / fps, start_time, end_time)) > self.threshold:
                         label[t, k] = 1
 
             labels.append(label)
@@ -104,20 +107,20 @@ class TACoS(torch.utils.data.Dataset):
         :param item:
         :return:
         """
-        s = self.textual_data[item]
+        s = self.captions[item]
         file = s.video_id + '_features.pt'
         path = os.path.join(self.visual_data_path, file)
         frames = torch.load(path)
         label = self._generate_labels([frames], [s])[0]
         return frames, s, label
 
-    def _load_visual_data(self, textual_data: List[Caption]):
+    def _load_visual_data(self, captions: List[Caption]):
         """
         :param textual_data:
         :return: list of the videos corresponding to the annotations
         """
         visual_data = []
-        for t in textual_data:
+        for t in captions:
             video_id = t.video_id
             file = video_id + '_features.pt'
             path = os.path.join(self.visual_data_path, file)
@@ -142,17 +145,17 @@ class TACoS(torch.utils.data.Dataset):
         
         for i in range(batch_num):
             indices = index_array[i * batch_size: (i + 1) * batch_size]
-            textual_data = [self.textual_data[idx] for idx in indices]
-            textual_data = sorted(textual_data, key=lambda s: len(s.sent), reverse=True)
+            batch_captions = [self.captions[idx] for idx in indices]
+            batch_captions = sorted(batch_captions, key=lambda s: len(s.sent), reverse=True)
 
-            visual_data = self._load_visual_data(textual_data)
+            visual_data = self._load_visual_data(batch_captions)
 
             if set == 'train':
-                labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
-                textual_data = [s.sent for s in textual_data]
-                yield textual_data, visual_data, labels
+                labels = self._generate_labels(visual_data=visual_data, captions=batch_captions)
+                captions_sents = [s.sent for s in batch_captions]
+                yield captions_sents, visual_data, labels
             else:
-                yield textual_data, visual_data
+                yield batch_captions, visual_data
 
     
 class ActivityNet(torch.utils.data.Dataset):
@@ -177,7 +180,7 @@ class ActivityNet(torch.utils.data.Dataset):
                 sents = value['sentences']
                 sents = [tokenizer.tokenize(sent.lower()) for sent in sents]
 
-                self.train_captions += [Caption(video_id=key, start=time_stamp[0], end=time_stamp[1], 
+                self.train_captions += [Caption(video_id=key, start_time=time_stamp[0], end_time=time_stamp[1],
                                                 sent=sent) for time_stamp, sent in zip(time_stamps, sents)]
         
         self.val_captions = []
@@ -205,21 +208,18 @@ class ActivityNet(torch.utils.data.Dataset):
         """
         s = self.train_captions[item]
         visual_feature = torch.from_numpy(self.visual_features[s.video_id]['c3d_features'][:]).float()
-        visual_feature = visual_features[list(range(0, len(features), 3))]
+        visual_feature = visual_feature[list(range(0, len(features), 3))]
         label = self._generate_labels([visual_feature], [s])[0]
         return visual_feature, s, label
     
-    def _generate_labels(self, visual_data: List[torch.Tensor], textual_data: List[Caption]):
+    def _generate_labels(self, visual_data: List[torch.Tensor], captions: List[Caption]):
         """
         :param visual_data: a list of extracted features from videos
         :param textual_data: list of annotations
         :returns labels for the samples
         """
-        # number of frames per second for TACoS dataset
         fps = 30
-        
-        # note that we sampled one frame every five seconds while we pre-processed the data
-        sample_rate = fps * 5
+        sample_rate = 24
 
         labels = []
         for v, s in zip(visual_data, textual_data):
@@ -246,7 +246,7 @@ class ActivityNet(torch.utils.data.Dataset):
         for t in textual_data:
             video_id = t.video_id
             features = torch.from_numpy(self.visual_features[video_id]['c3d_features'][:]).float()
-            features = features[list(range(0, len(features), 3))]  # sample one third of the frames
+            features = features[list(range(0, features.shape[0], 3))]  # sample one third of the frames
             visual_data.append(features)
 
         return visual_data
@@ -271,7 +271,7 @@ class ActivityNet(torch.utils.data.Dataset):
             visual_data = self._load_visual_data(textual_data)  # a list of torch.Tensors
 
             if set == 'train':
-                labels = self._generate_labels(visual_data=visual_data, textual_data=textual_data)
+                labels = self._generate_labels(visual_data=visual_data, captions=textual_data)
                 textual_data = [s.sent for s in textual_data]
                 yield textual_data, visual_data, labels
             else:

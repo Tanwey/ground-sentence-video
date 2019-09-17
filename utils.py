@@ -156,9 +156,9 @@ def find_K(textual_data_path: str):
     plt.show()
 
 
-def compute_overlap(start_a, end_a, start_b, end_b):
+def compute_overlap(start_a: float, end_a: float, start_b: float, end_b: float):
     """
-    :param start_a: start frame of first segment
+    :param start_a: start time of first segment
     :param end_a: end frame of first segment
     :param start_b: start frame of second segment
     :param end_b: end frame of second segment
@@ -169,14 +169,14 @@ def compute_overlap(start_a, end_a, start_b, end_b):
 
     if start_a <= start_b:
         if start_b <= end_a <= end_b:
-            return end_a - start_b + 1
+            return end_a - start_b
         elif end_a > end_b:
-            return end_b - start_b + 1
+            return end_b - start_b
     else:
         if start_a <= end_b <= end_a:
-            return end_b - start_a + 1
+            return end_b - start_a
         elif end_b > end_a:
-            return end_a - start_a + 1
+            return end_a - start_a
 
 
 if __name__ == '__main__':
