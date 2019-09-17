@@ -5,7 +5,6 @@ from models.interactor import Interactor
 from models.visual_lstm_encoder import VisualLSTMEncoder
 from models.textual_lstm_encoder import TextualLSTMEncoder
 from models.grounder import Grounder
-from utils import pad_visual_data
 from typing import List, Dict, Tuple
 import numpy as np
 import sys
@@ -13,7 +12,7 @@ import sys
 
 class TGN(nn.Module):
     def __init__(self, word_embed_size: int, hidden_size_textual: int, hidden_size_visual: int,
-                 hidden_size_ilstm: int, K: int):
+                 hidden_size_ilstm: int, K: int, feature_size: int):
         super(TGN, self).__init__()
 
         self.word_embed_size = word_embed_size
@@ -24,16 +23,12 @@ class TGN(nn.Module):
 
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
-#       self.cnn_encoder = VGG16()
 
-#       self.feature_size = self.cnn_encoder.model.classifier[-3].out_features
-
-        self.feature_size = 500
+        self.feature_size = feature_size
 
         self.visual_lstm_encoder = VisualLSTMEncoder(input_size=self.feature_size, hidden_size=hidden_size_visual)
 
-        self.grounder = Grounder(input_size=hidden_size_ilstm,
-                                 K=K)
+        self.grounder = Grounder(input_size=hidden_size_ilstm, K=K)
 
         self.interactor = Interactor(hidden_size_ilstm=hidden_size_ilstm,
                                      hidden_size_visual=hidden_size_visual,
@@ -41,24 +36,17 @@ class TGN(nn.Module):
 
     def forward(self, features_v: List[torch.Tensor], textual_input: torch.Tensor, lengths_t: List[int]):
         """
-        :param visual_input:
+        :param features_v: visual features extracted by a CNN encoder beforehand
         :param textual_input: a tensor containing a batch of embedded words
-        with shape (n_batch, N, sentence_length, word_embed_size: 300)
+        with shape (n_batch, N, max_sentence_length, word_embed_size)
         :param lengths_t: lengths of sentences
-        :return: grounding scores with shape (n_batch, T, K)
+        :returns grounding scores as a tensor with shape (n_batch, T, K)
         """
         lengths_v = [v.shape[0] for v in features_v]
-
-        mask = self._generate_videos_mask(lengths_v)
-
-#         visual_input_cat = torch.cat(visual_input, dim=0).to(torch.float32)
-
-#         features_v_cat = self.cnn_encoder(visual_input_cat.to(self.device))  # shape: (n_batch, T, feature_size)
-#         features_v = torch.split(features_v_cat, lengths_v)
+        mask = self._generate_visual_mask(lengths_v)  # used later for computing the loss
 
         features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
         lengths_v = sorted(lengths_v, reverse=True)
-        
         features_v_padded = pad_visual_data(features_v, self.device)  # shape (n_batch, T, dim_feature)
 
         h_s = self.textual_lstm_encoder(textual_input, lengths_t)  # shape: (n_batch, N, hidden_size_textual)
@@ -71,7 +59,7 @@ class TGN(nn.Module):
 
         return probs, mask
 
-    def _generate_videos_mask(self, lengths: List[int]):
+    def _generate_visual_mask(self, lengths: List[int]):
         n_batch = len(lengths)
         max_len = np.max(lengths)
 
@@ -81,6 +69,22 @@ class TGN(nn.Module):
             mask[i, lengths[i]:, :] = 0
 
         return mask.to(self.device)
+
+    def _pad_visual_data(self, visual_data: List[torch.Tensor]):
+        """
+        :param visual_data: list of visual features as torch.Tensor
+        :returns: a tensor with shape (n_batch, max_len, feature_dim) where max_len is the
+        maximum length of input videos
+        """
+        feature_dim = visual_data[0].shape[1]
+        max_len = np.max([v.shape[0] for v in visual_data])
+
+        visual_data_padded = list(map(lambda v: torch.cat([v.to(self.device),
+                                                           torch.zeros([max_len - v.shape[0],
+                                                                        feature_dim]).to(self.device)]
+                                                          ).unsqueeze(dim=0), visual_data))
+
+        return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
 
     @property
     def device(self) -> torch.device:

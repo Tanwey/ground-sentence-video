@@ -44,21 +44,6 @@ def pad_textual_data(sents: List[List[str]], pad_token):
     return sents_padded
 
 
-def pad_visual_data(visual_data: List[torch.Tensor], device):
-    """
-    :param visual_data:
-    :return:
-    """
-    feature_dim = visual_data[0].shape[1]
-    max_len = np.max([v.shape[0] for v in visual_data])
-
-    visual_data_padded = list(map(lambda v: torch.cat([v.to(device),
-                                                       torch.zeros([max_len - v.shape[0], feature_dim]).to(device)]
-                                                      ).unsqueeze(dim=0), visual_data))
-
-    return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
-
-
 def pad_labels(labels: List[torch.Tensor]):
     """
     :param labels: a list with length num_labels of torch.Tensor

@@ -45,21 +45,18 @@ class Interactor(nn.Module):
             beta_t = self.projection_w(torch.tanh(self.projection_R(h_r_prev).unsqueeze(dim=1) +
                                                   self.projection_S(h_s) +
                                                   self.projection_V(h_v[:, t, :]).unsqueeze(dim=1))
-                                       ).squeeze(2)  # shape (n_batch, N)
+                                       ).squeeze(dim=2)  # shape (n_batch, N)
 
-            #print('beta_t shape', beta_t.shape)
+            alpha_t = torch.softmax(beta_t, dim=1)  # shape: (n_batch, N)
 
-            alpha_t = torch.softmax(beta_t, dim=0)  # shape: (n_batch, N)
-
-            # H_ts_s with shape (n_batch, hidden_size_textual)
+            # computing H_t_s with shape (n_batch, hidden_size_textual)
             H_t_s = torch.bmm(h_s.permute(0, 2, 1), alpha_t.unsqueeze(dim=2)).squeeze(dim=2)
-            #print('H_t_s shape', H_t_s.shape)
 
             r_t = torch.cat([h_v[:, t, :], H_t_s], dim=1)  # shape (n_batch, hidden_size_textual+hidden_size_visual)
-            #print('r_t shape', r_t.shape)
 
+            # computing h_r_new and c_r_new with shape (n_batch, hidden_size_ilstm)
             h_r_new, c_r_new = self.iLSTM(r_t, (h_r_prev, c_r_prev))
-            outputs.append(h_r_new.unsqueeze(1))
+            outputs.append(h_r_new.unsqueeze(dim=1))
             h_r_prev, c_r_prev = h_r_new, c_r_new
 
         return torch.cat(outputs, dim=1)
