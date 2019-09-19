@@ -21,7 +21,7 @@ Code for the paper [Temporally Grounding Natural Sentence in Video](https://ai.t
 
 This paper focuses on the task of grounding. Given an untrimmed video and a natural sentence, the model has to find a segment in the video with the same semantic content as the given sentence. 
 
-![task-example](sentence.pdf)
+![task-example](task_example)
 
 
 
