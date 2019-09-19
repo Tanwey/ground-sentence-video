@@ -12,7 +12,7 @@ import sys
 
 class TGN(nn.Module):
     def __init__(self, word_embed_size: int, hidden_size_textual: int, hidden_size_visual: int,
-                 hidden_size_ilstm: int, K: int, feature_size: int):
+                 hidden_size_ilstm: int, K: int, visual_feature_size: int):
         super(TGN, self).__init__()
 
         self.word_embed_size = word_embed_size
@@ -24,9 +24,9 @@ class TGN(nn.Module):
         self.textual_lstm_encoder = TextualLSTMEncoder(embed_size=word_embed_size,
                                                        hidden_size=hidden_size_textual)
 
-        self.feature_size = feature_size
+        self.visual_feature_size = visual_feature_size
 
-        self.visual_lstm_encoder = VisualLSTMEncoder(input_size=self.feature_size, hidden_size=hidden_size_visual)
+        self.visual_lstm_encoder = VisualLSTMEncoder(input_size=self.visual_feature_size, hidden_size=hidden_size_visual)
 
         self.grounder = Grounder(input_size=hidden_size_ilstm, K=K)
 
@@ -47,7 +47,7 @@ class TGN(nn.Module):
 
         features_v = sorted(features_v, key=lambda v: v.shape[0], reverse=True)
         lengths_v = sorted(lengths_v, reverse=True)
-        features_v_padded = pad_visual_data(features_v, self.device)  # shape (n_batch, T, dim_feature)
+        features_v_padded = self._pad_visual_data(features_v)  # shape (n_batch, T, dim_feature)
 
         h_s = self.textual_lstm_encoder(textual_input, lengths_t)  # shape: (n_batch, N, hidden_size_textual)
 
@@ -60,6 +60,7 @@ class TGN(nn.Module):
         return probs, mask
 
     def _generate_visual_mask(self, lengths: List[int]):
+        """Generate a mask to not consider the padding positions in videos while computing the final loss"""
         n_batch = len(lengths)
         max_len = np.max(lengths)
 
@@ -80,8 +81,7 @@ class TGN(nn.Module):
         max_len = np.max([v.shape[0] for v in visual_data])
 
         visual_data_padded = list(map(lambda v: torch.cat([v.to(self.device),
-                                                           torch.zeros([max_len - v.shape[0],
-                                                                        feature_dim]).to(self.device)]
+                                                           torch.zeros([max_len - v.shape[0], feature_dim]).to(self.device)]
                                                           ).unsqueeze(dim=0), visual_data))
 
         return torch.cat(visual_data_padded, dim=0)  # tensor with shape (n_batch, max_len, feature_dim)
@@ -116,7 +116,7 @@ class TGN(nn.Module):
         params = {
             'args': dict(word_embed_size=self.word_embed_size, hidden_size_textual=self.hidden_size_visual,
                          hidden_size_visual=self.hidden_size_visual, hidden_size_ilstm=self.hidden_size_ilstm,
-                         K=self.K),
+                         K=self.K, visual_feature_size=self.visual_feature_size),
             'state_dict': self.state_dict()
         }
 

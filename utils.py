@@ -30,10 +30,8 @@ from models.cnn_encoder import VGG16
 
 def pad_textual_data(sents: List[List[str]], pad_token):
     """ Pad list of sentences according to the longest sentence in the batch.
-    :param sents: list of sentences, where each sentence
-                                    is represented as a list of words
+    :param sents: list of sentences, where each sentence is represented as a list of words
     :param pad_token: padding token
-
     :returns sents_padded: list of sentences where sentences shorter
     than the max length sentence are padded out with the pad_token, such that
     each sentences in the batch now has equal length.
@@ -46,7 +44,7 @@ def pad_textual_data(sents: List[List[str]], pad_token):
 
 def pad_labels(labels: List[torch.Tensor]):
     """
-    :param labels: a list with length num_labels of torch.Tensor
+    :param labels: a list with length num_labels of torch.Tensors
     :returns labels_padded: returns a torch.Tensor with shape (num_labels, T, K)
     """
     num_labels = len(labels)
@@ -76,7 +74,7 @@ def load_word_vectors(glove_file_path):
 
 
 def extract_frames_tacos(visual_data_path: str, processed_visual_data_path: str, output_frame_size: Tuple):
-
+    """Extracts the frames from the raw videos of TACoS and save them as numpy arrays"""
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
@@ -92,7 +90,6 @@ def extract_frames_tacos(visual_data_path: str, processed_visual_data_path: str,
         fps = math.ceil(cap.get(cv2.CAP_PROP_FPS))
 
         while success:
-
             success, frame = cap.read()
             if success:
                 if current_frame % (fps * 5) == 0:  # sampling one frame every five seconds
@@ -107,10 +104,8 @@ def extract_frames_tacos(visual_data_path: str, processed_visual_data_path: str,
         np.save(output_file, frames)
 
         
-def extract_features(frames_path: str, features_path: str):
-    """
-    extract the features using the cnn encoder.
-    """
+def extract_visual_features(frames_path: str, features_path: str):
+    """Extracts the features from frames using the pretrained VGG 16 network"""
     files = os.listdir(frames_path)
     
     # A standard transform needed to be applied to inputs of the models pre-trained on ImageNet
@@ -127,21 +122,41 @@ def extract_features(frames_path: str, features_path: str):
         features = cnn_encoder(frames_tensor.to(device))
         out_file = os.path.join(features_path, file.replace('.npy', '_features.pt'))
         torch.save(features, out_file)
+
+
+def find_bce_weights(dataset, K: int, device):
+    """Finds the weights w0 and w1 used for computing the cross entropy loss
+    (Please refer to the paper for details)
+    """
+    if not os.path.exists('w0_{}_{}.pt'.format(K, dataset.name)):
+        print('Calculating BCE weights w0 and w1 for {}...'.format(dataset.name), file=sys.stderr)
+        w0 = torch.zeros([K, ], dtype=torch.float32)
+
+        num_samples = len(dataset)
+        time_steps = 0
+
+        for i in tqdm(range(num_samples)):
+            _, _, label = dataset[i]
+            T = label.shape[0]
+            time_steps += T
+            tmp = torch.sum(label, dim=0).to(torch.float32)
+            w0 += T - tmp
+
+        w0 = (w0 / time_steps).to(device)
+        torch.save(w0, 'w0_{}_{}.pt'.format(K, dataset.name))
         
-
-def load_features_activitynet(features_path: str):
-    video_ids = list(fid.keys())
-
-    # This line clearly shows that the features are stored as Group/Dataset
-    feat_video_ith = fid[video_lst[ith]]['c3d_features'][:]
-    
-    return 
-
-def extract_frames_didemo():
-    pass
-
+        return w0, 1-w0
+    else:
+        print('Loading BCE weights w0 and w1...', file=sys.stderr)
+        
+        w0 = torch.load('w0_{}_{}.pt'.format(K, dataset.name))
+        w0 = w0.to(device)
+        return w0, 1-w0
 
 def find_K(textual_data_path: str):
+    """Shows the statistics of the textual data in order to find the appropriate valud of K
+    (Please refer to the paper for more details)
+    """
     lengths = []
     for file in os.listdir(textual_data_path):
         with open(os.path.join(textual_data_path, file)) as tsvfile:
@@ -162,7 +177,7 @@ def compute_overlap(start_a: float, end_a: float, start_b: float, end_b: float):
     :param end_a: end frame of first segment
     :param start_b: start frame of second segment
     :param end_b: end frame of second segment
-    :return: number of overlapping frames between two segments
+    :returns the temporal overlap between the segments (float)
     """
     if end_a < start_b or end_b < start_a:
         return 0

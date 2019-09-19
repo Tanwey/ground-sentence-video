@@ -8,3 +8,4 @@ glove*
 vocab.txt
 runs/
 model.bin*
+sample_data.py
