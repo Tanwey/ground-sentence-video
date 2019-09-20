@@ -89,7 +89,7 @@ data
 
 
 ### TACoS
-You can download the TACoS dataset from [here](http://www.coli.uni-saarland.de/projects/smile/page.php?id=tacos). You can find the captions in the `alignments-text` subdirectory after you download the dataset. The raw dataset contains videos in .avi format. The visual features first needed to be extracted from the videos using a cnn encoder pretrained on ImageNet. You can use `extract_frames_tacos` to extract the frames (with the desired sample rate) from videos using OpenCv module. The `extract_visual_features` function is also provided to extract the features from the frames using `VGG16` network implemented in `cnn_encoder.py` and save them as `<video_id>_features.pt`. I will update the code in the future to support `InceptionV4` and `optical flow` networks too.
+You can download the TACoS dataset from [here](http://www.coli.uni-saarland.de/projects/smile/page.php?id=tacos). You can find the captions in the `alignments-text` subdirectory after downloading the dataset. The raw dataset contains videos in .avi format. Therefore, the visual features have to be extracted first from the videos using a CNN encoder pre-trained on ImageNet. You can use `extract_frames_tacos` to extract the frames (with the desired sample rate) from videos using OpenCV module. The `extract_visual_features` function is also provided to extract the features from the frames using `VGG16` network implemented in `cnn_encoder.py` and save them as `<video_id>_features.pt`. I will update the code in the future to support `InceptionV4` and `optical flow` networks too.
 
 
 ### ActivityNet Captions
@@ -97,7 +97,7 @@ You can download the ActivityNet captions from [here](https://cs.stanford.edu/pe
 
 
 ## Training
-You can train the network by running `train.py`. There are various arguments that controls the training procedure which can be shown by running the following command:
+You can train the network by running `train.py`. There are various arguments that control the training procedure which can be shown by running the following command:
 
 ```sh
 python train.py --help

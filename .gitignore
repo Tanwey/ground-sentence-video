@@ -6,4 +6,3 @@ glove*
 vocab.txt
 runs/
 model.bin*
-.gitignore
