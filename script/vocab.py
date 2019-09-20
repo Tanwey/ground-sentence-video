@@ -5,12 +5,11 @@ import sys
 
 
 class Vocab(object):
-    """ Vocabulary
+    """Vocabulary
     Constructing the vocabulary with the words of Glove
     """
-    def __init__(self, words):
-        """
-        Init VocabEntry Instance.
+    def __init__(self, words: List[str]):
+        """Initializes Vocab instance
         :param words: list of words
         """
         print('Creating vocabulary...', file=sys.stderr)
@@ -24,7 +23,7 @@ class Vocab(object):
         self.id2word = {v: k for k, v in self.word2id.items()}
 
     def __getitem__(self, word):
-        """ Retrieve word's index. Return the index for the unk
+        """Retrieves word's index. Return the index for the unk
         token if the word is out of vocabulary.
         :param word: word to look up.
         :returns index: index of word
@@ -32,38 +31,37 @@ class Vocab(object):
         return self.word2id.get(word, self.word2id['<unk>'])
 
     def __contains__(self, word):
-        """ Check if word is captured by VocabEntry.
+        """Checks if word is captured by VocabEntry.
         :param word: word to look up
         :returns contains: whether word is contained
         """
         return word in self.word2id
 
     def __setitem__(self, key, value):
-        """ Raise error, if one tries to edit the VocabEntry."""
+        """Raises error, if one tries to edit the Vocab"""
         raise ValueError('vocabulary is readonly')
 
     def __len__(self):
-        """ Compute number of words in VocabEntry.
-        :returns len: number of words in VocabEntry
+        """Computes number of words in Vocab
+        :returns len: number of words in Vocab
         """
         return len(self.word2id)
 
     def __repr__(self):
-        """ Representation of VocabEntry to be used
-        when printing the object.
+        """Representation of Vocab to be used when 
+        printing the object.
         """
         return 'Vocabulary[size=%d]' % len(self)
 
     def id2word(self, wid):
-        """ Return mapping of index to word.
+        """Returns mapping of index to word.
         :param wid: word index
         :returns word: word corresponding to index
         """
         return self.id2word[wid]
 
     def add(self, word):
-        """
-        Add word to VocabEntry, if it is previously unseen.
+        """Adds word to Vocab, if it is previously unseen.
         :param word: word to add to VocabEntry
         """
         if word not in self:
@@ -74,7 +72,7 @@ class Vocab(object):
             return self[word]
 
     def words2indices(self, sents):
-        """ Convert list of words or list of sentences of words into list or list of list of indices.
+        """Converts list of words or list of sentences of words into list or list of list of indices.
         :param sents: (list[str] or list[list[str]] sentence(s) in words
         :return word_ids: (list[int] or list[list[int]]) sentence(s) in indices
         """
@@ -84,14 +82,14 @@ class Vocab(object):
             return [self[w] for w in sents]
 
     def indices2words(self, word_ids: List[int]):
-        """ Convert list of indices into words.
+        """Converts list of indices into words.
         :param word_ids: list of word ids
         :returns sents: list of words
         """
         return [self.id2word[w_id] for w_id in word_ids]
 
     def to_input_tensor(self, sents: List[List[str]], device: torch.device) -> torch.Tensor:
-        """ Convert list of sentences (words) into tensor with necessary padding for
+        """Converts list of sentences (words) into tensor with necessary padding for
         shorter sentences.
         :param sents: list of sentences (words)
         :param device: device on which to load the tesnor, i.e. CPU or GPU

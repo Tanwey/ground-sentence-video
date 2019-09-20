@@ -2,8 +2,7 @@
 train.py: Train the Temporally Grounding Network (TGN) model
 
 Usage:
-    train.py train-tacos --textual-data-path=<dir> --visual-data-path=<dir> [options]
-    train.py train-acnet --textual-data-path=<dir> --visual-data-path=<dir> [options]
+    train.py (tacos | acnet) --textual-data-path=<dir> --visual-data-path=<dir> [options]
 
 Options:
     -h --help                               show this screen
@@ -23,7 +22,7 @@ Options:
     --max-num-trial=<int>                   terminate training after how many trials [default: 3]
     --model-save-path=<file>                model save path [default: model.bin]
     --valid-niter=<int>                     perform validation after how many iterations [default: 50]
-    --top-n-eval=<int>                      Parameter N in R@N, IOU=θ evaluation metric [default: 1]
+    --top-n-eval=<int>                      parameter N in R@N, IOU=θ evaluation metric [default: 1]
     --lr-decay=<float>                      learning rate decay [default: 0.5]
 """
 
@@ -78,33 +77,23 @@ def validation(model: TGN, dataset, device, embedding: nn.Embedding, args: Dict)
     return cum_score / cum_samples
 
 
-def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict, device):
+def train(dataset, vocab: Vocab, word_vectors: np.ndarray, args: Dict, device):
     max_iter = int(args['--max-iter'])
     valid_niter = int(args['--valid-niter'])
-    textual_data_path = args['--textual-data-path']
-    visual_data_path = args['--visual-data-path']
     batch_size = int(args['--batch-size'])
-    delta = int(args['--delta'])
-    K = int(args['--K'])
     lr = float(args['--lr'])
     log_every = int(args['--log-every'])
-    threshold = float(args['--threshold'])
+    K = int(args['--K'])
     model_save_path = args['--model-save-path']
 
     embedding = nn.Embedding(len(vocab), word_vectors.shape[1], padding_idx=vocab.word2id['<pad>'])
     embedding.weight = nn.Parameter(data=torch.from_numpy(word_vectors).to(torch.float32), requires_grad=False)
-
-    if args['train-tacos']:
-        dataset = TACoS(textual_data_path=textual_data_path, visual_data_path=visual_data_path, 
-                        K=K, delta=delta, threshold=threshold)
-    elif args['train-acnet']:
-        dataset = ActivityNet(textual_data_path=textual_data_path, visual_data_path=visual_data_path, 
-                              K=K, delta=delta, threshold=threshold)
     
     model = TGN(hidden_size_ilstm=int(args['--hidden-size-ilstm']),
                 hidden_size_textual=int(args['--hidden-size-textual-lstm']),
                 hidden_size_visual=int(args['--hidden-size-visual-lstm']),
-                K=K, word_embed_size=word_vectors.shape[1], visual_feature_size=dataset.visual_feature_size)
+                K=K, word_embed_size=word_vectors.shape[1], 
+                visual_feature_size=dataset.visual_feature_size)
 
     model.train()
 
@@ -214,7 +203,7 @@ def train(vocab: Vocab, word_vectors: np.ndarray, args: Dict, device):
                         print('restore parameters of the optimizers', file=sys.stderr)
                         optimizer.load_state_dict(torch.load(model_save_path + '.optim'))
 
-                        # set new lr
+                        # set new learning rate
                         for param_group in optimizer.param_groups:
                             param_group['lr'] = lr
 
@@ -230,15 +219,21 @@ if __name__ == '__main__':
     word_embed_size=50
     words, word_vectors = load_word_vectors('glove.6B.{}d.txt'.format(word_embed_size))
 
-#     with open('vocab.txt', 'r') as f:
-#         words = f.readlines()
-#     word_vectors = np.zeros([len(words)+2, 300])
-
     vocab = Vocab(words)
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('use device: %s' % device, file=sys.stderr)
     
-    if args['train-tacos'] or args['train-acnet']:
-        train(vocab, word_vectors, args, device)
+    if args['tacos']:
+        dataset = TACoS(textual_data_path=args['--textual-data-path'], 
+                        visual_data_path=args['--visual-data-path'], 
+                        K = int(args['--K']), delta = int(args['--delta']), 
+                        threshold = float(args['--threshold']))
+    elif args['acnet']:
+        dataset = ActivityNet(textual_data_path=args['--textual-data-path'], 
+                              visual_data_path=args['--visual-data-path'], 
+                              K = int(args['--K']), delta = int(args['--delta']), 
+                              threshold = float(args['--threshold']))
+        
+    train(dataset, vocab, word_vectors, args, device)
         

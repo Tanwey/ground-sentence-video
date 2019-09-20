@@ -22,6 +22,7 @@ import csv
 from torchvision import transforms
 from matplotlib import pyplot as plt
 from skimage import transform
+from tqdm import tqdm
 from docopt import docopt
 import sys
 import torch.nn as nn
@@ -43,7 +44,8 @@ def pad_textual_data(sents: List[List[str]], pad_token):
 
 
 def pad_labels(labels: List[torch.Tensor]):
-    """
+    """Pad labels according to the label with longest number of time steps (T)
+    and concatenates them into a single torch.Tensor
     :param labels: a list with length num_labels of torch.Tensors
     :returns labels_padded: returns a torch.Tensor with shape (num_labels, T, K)
     """
@@ -74,7 +76,7 @@ def load_word_vectors(glove_file_path):
 
 
 def extract_frames_tacos(visual_data_path: str, processed_visual_data_path: str, output_frame_size: Tuple):
-    """Extracts the frames from the raw videos of TACoS and save them as numpy arrays"""
+    """Extracts frames from the raw videos of TACoS and save them as numpy arrays"""
     if not os.path.exists(processed_visual_data_path):
         os.mkdir(processed_visual_data_path)
 
@@ -156,7 +158,7 @@ def find_bce_weights(dataset, K: int, device):
 
 def top_n_iou(y_pred: torch.Tensor, gold_start_times: List[int], gold_end_times: List[int], args: Dict,
              fps: int, sample_rate: int):
-    """
+    """Computes R@N, IOU=θ evaluation metric
     :param y_pred: torch.Tensor with shape (n_batch, T, K)
     :param gold_start_times: ground truth start frames with len (n_batch,)
     :param gold_end_times: ground truth end frames with len (n_batch,)
@@ -204,7 +206,7 @@ def find_K(textual_data_path: str):
 
 
 def compute_overlap(start_a: float, end_a: float, start_b: float, end_b: float):
-    """
+    """Computes the temporal overlap between two segments
     :param start_a: start time of first segment
     :param end_a: end frame of first segment
     :param start_b: start frame of second segment
