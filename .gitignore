@@ -1,5 +1,7 @@
 .idea/
 script/models/__pycache__/
+data/ActivityNet/text.txt
+data/TACoS/text.txt
 .DS_Store
 __pycache__/
 glove*
