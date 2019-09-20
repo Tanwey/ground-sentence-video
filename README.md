@@ -20,22 +20,26 @@ If you find this code useful, please consider citing the original work by author
 
 
 ## Introduction
-This paper focuses on the task of Natural Sentence Grounding in Video (NSGV). Given an untrimmed video $s$ and a natural sentence, the model has to find a segment in the video with the same semantic content as the given sentence. 
+This paper focuses on the task of Natural Sentence Grounding in Video (NSGV). Given an untrimmed video and a natural sentence, the model has to find a segment in the video with the same semantic content as the given sentence. 
 
-![task-example](task_example.jpg)
+![task-example](figures/task_example.jpg)
 
 
 ## Proposed Model
-Prior work has addressed this task mostly by utilizing a temporal sliding window over the videos [1] and [2]. Moreover, they project both the videos and captions into the same embedding space and use the generated vectors to match the segmnets in video. According to the paper, this matching just consider the globbal relations between the textual and visual data. In order to address these issues, this paper proposes **Temporal GroundNet (TGN)** as the first single-stream neural architecture for the task of NSGV. The following figure depicts the overview of the model:
+Prior work has addressed this task mostly by utilizing a temporal sliding window over the videos which is prohibitively slow [2][3]. Moreover, they project both the videos and captions into the same embedding space and use the generated vectors to match the segments in video with the captions. According to [1], this matching just considers the globbal relations between the textual and visual data. In order to address these issues, this paper proposes **Temporal GroundNet (TGN)** as the first single-stream neural architecture for the task of NSGV. The following figure depicts the overview of the model:
 
 <p align="center">
-<img src="model.jpg" alt="drawing" width="600"/>
+<img src="figures/model.jpg" alt="drawing" width="600"/>
 </p>
 
-In order to extract the fine-grained interactions between frames and words, TGN relies on an _interactor_ network which is a LSTM (named iLSTM in the figure). The iLSTM computes a frame specific sentence representation for each frame. It gets the hidden states of the and compute the sollowing based on the following formula: 
+In order to extract the fine-grained interactions between frames and words, TGN relies on an _interactor_ network which is a LSTM network (named iLSTM in the figure). The iLSTM computes a frame specific sentence representation for each frame. To be more specific, it gets the hidden states of the textual LSTM encoder and computes the following representation: 
+
+<p align="center">
+<img src="figures/frame_specific_faeture.png" alt="drawing" width="120"/>
+</p>
 
 
-where ⍺ is the weights correpsonding to a word in the sentence. Please refer to the original paper to see how these weights are calculated. Note that the names of the variables in the code matches the symbols used by the paper. It is worth mentioning that the network goes through the video only once which leads to less computational cost coparing to previous work. The implementations of different components of the model can be found in the `models` directory. The code is well documented to leave no room for ambiguity.
+where **_h_** are the hidden states of textual LSTM encoder and **⍺**'s are the weights correpsonding to these hidden states. Please refer to the original paper to see how these weights are calculated. Note that the names of the variables in the code matches the symbols used by the paper. It is worth mentioning that the network goes through the video only once which leads to less computational cost comparing to previous work. The implementations of different components of the model can be found in the `models` directory. The code is well documented to leave no room for ambiguity.
 
 
 ## Dependencies
@@ -107,6 +111,9 @@ python train.py acnet --textual-data-path=data/ActivityNet/captions
 ```
 The code is well documented to leave no room for ambiguity. The model is evaluated on the validation set throughout the training and the best checkpoint is saved based on the R@N IoU=θ metric. Tensorboard is also used to visualize the training loss and validation score curves. Here is an ilustation of these curves for a run on ActivityNet dataset:
 
+<p align="center">
+<img src="figures/graphs.png" alt="drawing" width="600"/>
+</p>
 
 
 ## Evaluation
@@ -124,7 +131,7 @@ python evaluate.py acnet --textual-data-path=data/ActivityNet/captions
 ```
 
 ## References
-1) **** Temporally Grounding Natural Sentence in Video
+1) **Jingyuan Chen, Xinpeng Chen, Lin Ma, Zequn Jie, Tat-Seng Chua** Temporally Grounding Natural Sentence in Video [[aclweb]](https://www.aclweb.org/anthology/D18-1015)
 2) **Jiyang Gao, Chen Sun, Zhenheng Yang, Ram Nevatia** TALL: Temporal Activity Localization via Language Query [[arxiv]](http://arxiv.org/abs/1705.02101)
 3) **Lisa Anne Hendricks1, Oliver Wang, Eli Shechtman, Josef Sivic, Trevor Darrell1, Bryan Russell** Localizing Moments in Video with Natural Language [[arxiv]](https://arxiv.org/pdf/1708.01641.pdf)
 
