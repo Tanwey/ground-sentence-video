@@ -117,7 +117,7 @@ The model is evaluated on the validation set throughout the training procedure a
 
 
 ## Evaluation
-Evaluation of a trained model on the test set can be done using `evaluate.py`. You can run the following command to get the valid arguments:
+Evaluation of a trained model on the test set can be done using `evaluate.py`. You can run the following command to get the command-line arguments:
 
 ```sh
 python evaluate.py --help
