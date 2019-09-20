@@ -3,11 +3,11 @@ import os
 import csv
 import numpy as np
 from nltk.tokenize.toktok import ToktokTokenizer
-from script.utils import compute_overlap
+from utils import compute_overlap
 from math import ceil
 from typing import List
 from collections import namedtuple
-from script.utils import pad_labels
+from utils import pad_labels
 import json
 import h5py
 

@@ -21,11 +21,11 @@ import torch
 import torch.nn as nn
 from models.tgn import TGN
 from docopt import docopt
-from script.vocab import Vocab
-from script.utils import load_word_vectors
-from run import  top_n_iou
+from vocab import Vocab
+from utils import load_word_vectors
+from utils import top_n_iou
 import sys
-from script.data import TACoS, ActivityNet
+from data import TACoS, ActivityNet
 from tqdm import tqdm
 from math import ceil
 

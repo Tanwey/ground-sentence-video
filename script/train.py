@@ -32,47 +32,16 @@ import torch.nn as nn
 from models.tgn import TGN
 from docopt import docopt
 from typing import Dict, List
-from script.vocab import Vocab
-from script.utils import load_word_vectors, find_bce_weights, compute_overlap
+from vocab import Vocab
+from utils import load_word_vectors, find_bce_weights, compute_overlap, top_n_iou
 import sys
-from script.data import TACoS, ActivityNet
+from data import TACoS, ActivityNet
 from tqdm import tqdm
 from time import time
 from torch.nn.init import xavier_normal_, normal_
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from math import ceil
-
-
-def top_n_iou(y_pred: torch.Tensor, gold_start_times: List[int], gold_end_times: List[int], args: Dict,
-             fps: int, sample_rate: int):
-    """
-    :param y_pred: torch.Tensor with shape (n_batch, T, K)
-    :param gold_start_times: ground truth start frames with len (n_batch,)
-    :param gold_end_times: ground truth end frames with len (n_batch,)
-    :returns score: validation score
-    """
-    n_batch, T, K = y_pred.shape
-
-    delta = int(args['--delta'])
-    threshold = float(args['--threshold'])
-
-    # computing indices which is a Tensor with shape (n_batch, top_n_eval)
-    _, indices = torch.topk(y_pred.view(n_batch, -1), k=int(args['--top-n-eval']), dim=-1)
-
-    end_times = (indices // K) * sample_rate / fps  # tensor with shape (n_batch, top_n_eval)
-    scale_nums = (indices % K) + 1
-    start_times = end_times - (scale_nums * delta * sample_rate / fps)
-
-    score = 0
-
-    for i in range(n_batch):
-        max_overlap = np.max([compute_overlap(start_time.item(), end_time.item(), gold_start_times[i],
-                                              gold_end_times[i])
-                              for start_time, end_time in zip(start_times[i], end_times[i])])
-        score += int(max_overlap > threshold)
-
-    return score
 
 
 def validation(model: TGN, dataset, device, embedding: nn.Embedding, args: Dict):

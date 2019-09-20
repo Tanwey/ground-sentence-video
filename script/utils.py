@@ -14,7 +14,7 @@ from torch.nn import Embedding
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 import numpy as np
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 import os
 import cv2
 import math
@@ -152,6 +152,38 @@ def find_bce_weights(dataset, K: int, device):
         w0 = torch.load('w0_{}_{}.pt'.format(K, dataset.name))
         w0 = w0.to(device)
         return w0, 1-w0
+
+
+def top_n_iou(y_pred: torch.Tensor, gold_start_times: List[int], gold_end_times: List[int], args: Dict,
+             fps: int, sample_rate: int):
+    """
+    :param y_pred: torch.Tensor with shape (n_batch, T, K)
+    :param gold_start_times: ground truth start frames with len (n_batch,)
+    :param gold_end_times: ground truth end frames with len (n_batch,)
+    :returns score: validation score
+    """
+    n_batch, T, K = y_pred.shape
+
+    delta = int(args['--delta'])
+    threshold = float(args['--threshold'])
+
+    # computing indices which is a Tensor with shape (n_batch, top_n_eval)
+    _, indices = torch.topk(y_pred.view(n_batch, -1), k=int(args['--top-n-eval']), dim=-1)
+
+    end_times = (indices // K) * sample_rate / fps  # tensor with shape (n_batch, top_n_eval)
+    scale_nums = (indices % K) + 1
+    start_times = end_times - (scale_nums * delta * sample_rate / fps)
+
+    score = 0
+
+    for i in range(n_batch):
+        max_overlap = np.max([compute_overlap(start_time.item(), end_time.item(), gold_start_times[i],
+                                              gold_end_times[i])
+                              for start_time, end_time in zip(start_times[i], end_times[i])])
+        score += int(max_overlap > threshold)
+
+    return score
+
 
 def find_K(textual_data_path: str):
     """Shows the statistics of the textual data in order to find the appropriate valud of K

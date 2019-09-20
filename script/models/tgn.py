@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from script.models.interactor import Interactor
+from models.interactor import Interactor
 from models.visual_lstm_encoder import VisualLSTMEncoder
 from models.textual_lstm_encoder import TextualLSTMEncoder
 from models.grounder import Grounder

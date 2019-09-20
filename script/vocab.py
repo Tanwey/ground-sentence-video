@@ -1,6 +1,6 @@
 from typing import List
 import torch
-from script.utils import pad_textual_data
+from utils import pad_textual_data
 import sys
 
 
