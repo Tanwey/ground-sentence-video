@@ -1,6 +1,5 @@
 .idea/
 script/models/__pycache__/
-data/
 .DS_Store
 __pycache__/
 glove*
