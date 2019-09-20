@@ -26,20 +26,20 @@ This paper focuses on the task of Natural Sentence Grounding in Video (NSGV). Gi
 
 
 ## Proposed Model
-Prior work has addressed this task mostly by utilizing a temporal sliding window over the videos which is prohibitively slow [2][3]. Moreover, they project both the videos and captions into the same embedding space and use the generated vectors to match the segments in video with the captions. According to [1], this matching just considers the globbal relations between the textual and visual data. In order to address these issues, this paper proposes **Temporal GroundNet (TGN)** as the first single-stream neural architecture for the task of NSGV. The following figure depicts the overview of the model:
+Prior work has addressed this task mostly by utilizing a temporal sliding window over the videos which is prohibitively slow [2][3]. Moreover, they project both the videos and captions into the same embedding space and use the generated vectors to match the segments in the videos with the captions. According to [1], this matching just considers the globbal relations between the textual and visual data. In order to sidestep these problems, this paper proposes **Temporal GroundNet (TGN)** as the first single-stream neural architecture for the task of NSGV. The following figure depicts the overview of the model:
 
 <p align="center">
 <img src="figures/model.jpg" alt="drawing" width="600"/>
 </p>
 
-In order to extract the fine-grained interactions between frames and words, TGN relies on an _interactor_ network which is a LSTM network (named iLSTM in the figure). The iLSTM computes a frame specific sentence representation for each frame. To be more specific, it gets the hidden states of the textual LSTM encoder and computes the following representation: 
+In order to extract the fine-grained interactions between frames and words, TGN relies on an _interactor_ which is a LSTM network (named iLSTM in the figure). The iLSTM computes a frame specific sentence representation for each frame. To be more specific, it gets the hidden states of the textual LSTM encoder and computes the following representation for the _t_th frame: 
 
 <p align="center">
 <img src="figures/frame_specific_faeture.png" alt="drawing" width="120"/>
 </p>
 
 
-where **_h_** are the hidden states of textual LSTM encoder and **⍺**'s are the weights correpsonding to these hidden states. Please refer to the original paper to see how these weights are calculated. Note that the names of the variables in the code matches the symbols used by the paper. It is worth mentioning that the network goes through the video only once which leads to less computational cost comparing to previous work. The implementations of different components of the model can be found in the `models` directory. The code is well documented to leave no room for ambiguity.
+where **_h_**'s are the hidden states of textual LSTM encoder and **⍺**'s are the weights correpsonding to these hidden states. Please refer to the original paper to see how these weights are calculated. Note that the names of the variables in the code matches the symbols used by the paper. It is worth mentioning that the network goes through the video only once which leads to less computational cost comparing to previous work. The implementations of different components of the model can be found in the `models` directory. The code is documented well to leave no room for ambiguity.
 
 
 ## Dependencies
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 ```
 
 ## Data Preparation
-The original paper has evaluted the model on three datasets: DiDeMo, TACoS, and ActivityNet Captions. As the DiDeMo dataset is not publicly accessible anymore, I just considered TACoS and ActivityNet captions in my implementation.
+The original paper has evaluted the model on three datasets: DiDeMo, TACoS, and ActivityNet Captions. As the DiDeMo dataset is not publicly accessible anymore, I just considered TACoS and ActivityNet Captions in my implementation.
 
 Here is a tree-like format for the contents of `data` directory which shows all of the files required for the code to run properly:
 ```
@@ -89,7 +89,7 @@ data
 
 
 ### TACoS
-You can download the TACoS dataset from [here](http://www.coli.uni-saarland.de/projects/smile/page.php?id=tacos). You can find the captions in the `alignments-text` subdirectory after downloading the dataset. The raw dataset contains videos in .avi format. Therefore, the visual features have to be extracted first from the videos using a CNN encoder pre-trained on ImageNet. You can use `extract_frames_tacos` to extract the frames (with the desired sample rate) from videos using OpenCV module. The `extract_visual_features` function is also provided to extract the features from the frames using `VGG16` network implemented in `cnn_encoder.py` and save them as `<video_id>_features.pt`. I will update the code in the future to support `InceptionV4` and `optical flow` networks too.
+You can download the TACoS dataset from [here](http://www.coli.uni-saarland.de/projects/smile/page.php?id=tacos). You can find the captions in the `alignments-text` subdirectory after downloading the dataset. The raw dataset contains videos in .avi format. Therefore, the visual features have to be extracted first from the videos using a CNN encoder pre-trained on ImageNet. You can use `extract_frames_tacos` function to extract the frames (with the desired sample rate) from videos using OpenCV module. The `extract_visual_features` function is also provided to extract the features from the frames using `VGG16` network implemented in `cnn_encoder.py` and save them as `<video_id>_features.pt`. I will update the code in the future to support `InceptionV4` and `optical flow` networks too.
 
 
 ### ActivityNet Captions
@@ -102,14 +102,14 @@ You can train the network by running `train.py`. There are various arguments tha
 ```sh
 python train.py --help
 ```
-The example of running the code through command line on the ActivityNet dataset: 
+Here is an example of running the code through command line on the ActivityNet dataset: 
 
 ```sh
 python train.py acnet --textual-data-path=data/ActivityNet/captions 
 --visual-data-path=data/ActivityNet/C3D_features --batch-size=32 --delta=5 --threshold=0.1 
 --K=10 --log-every=1 --top-n-eval=5 --valid-niter=50 --patience=50 --max-num-trial=5
 ```
-The code is well documented to leave no room for ambiguity. The model is evaluated on the validation set throughout the training and the best checkpoint is saved based on the R@N IoU=θ metric. Tensorboard is also used to visualize the training loss and validation score curves. Here is an ilustation of these curves for a run on ActivityNet dataset:
+The model is evaluated on the validation set throughout the training procedure and the best checkpoint is saved based on the R@N IoU=θ metric. Tensorboard is also used to visualize the training loss and validation score curves. Here is an ilustation of these curves for a run on ActivityNet dataset:
 
 <p align="center">
 <img src="figures/graphs.png" alt="drawing" width="600"/>
