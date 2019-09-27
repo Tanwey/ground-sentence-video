@@ -115,6 +115,12 @@ The model is evaluated on the validation set throughout the training procedure a
 <img src="figures/graphs.png" alt="drawing" width="600"/>
 </p>
 
+Here is a view of command line interface during training (tqdm has been used for the progress-bars):
+<p align="center">
+<img src="figures/CLI.png" alt="drawing" width="600"/>
+</p>
+
+
 
 ## Evaluation
 Evaluation of a trained model on the test set can be done using `evaluate.py`. You can run the following command to get the command-line arguments:
